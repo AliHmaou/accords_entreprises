@@ -1,7 +1,7 @@
 import os
 from huggingface_hub import HfApi
 
-def upload_to_huggingface(file_path: str, repo_id: str, hf_token: str):
+def upload_to_huggingface(file_path: str, repo_id: str, hf_token: str, file_name_in_repo: str = None):
     """
     Upload a file to a Hugging Face dataset repository.
     """
@@ -15,8 +15,8 @@ def upload_to_huggingface(file_path: str, repo_id: str, hf_token: str):
 
     api = HfApi(token=hf_token)
     
-    # We use a constant name for simplicity
-    file_name_in_repo = "202511_IDFM_ACCO_ACCORDS_MOBILITES_MESURES_LOCALISATION.parquet"
+    if not file_name_in_repo:
+        file_name_in_repo = os.path.basename(file_path)
     
     print(f"Téléversement de {file_path} vers {repo_id}/{file_name_in_repo}...")
     
@@ -42,4 +42,4 @@ if __name__ == "__main__":
     repo = os.getenv("HF_REPO_ID")
     token = os.getenv("HF_TOKEN")
     
-    upload_to_huggingface(test_file, repo, token)
+    upload_to_huggingface(test_file, repo, token, "AAAAMMJJ_IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet")

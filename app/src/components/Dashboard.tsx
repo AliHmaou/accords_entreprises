@@ -12,7 +12,7 @@ import AboutDashboard from './AboutDashboard';
 import { initDuckDB, loadParquetFile, loadJsonJSONL, runQuery } from '../duckdbClient';
 
 // Updated URL for the new enriched dataset
-const PARQUET_URL = import.meta.env.VITE_HF_PARQUET_URL || "https://huggingface.co/datasets/alihmaou/202510_HM2025_ACCO_ACCORDS_MOBILITES/resolve/main/202511_IDFM_ACCO_ACCORDS_MOBILITES_MESURES_LOCALISATION.parquet";
+const PARQUET_URL = import.meta.env.VITE_HF_PARQUET_URL || "https://huggingface.co/datasets/alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES/resolve/main/AAAAMMJJ_IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet";
 const TABLE_NAME = "agreements";
 const ITEMS_PER_PAGE = 20;
 

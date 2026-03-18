@@ -191,20 +191,21 @@ def run():
         if do_upload:
             print("\n--- JALON 4: UPLOAD HUGGING FACE ---")
             
-            # On prend en priorité le fichier enrichi, sinon le final normal
-            file_to_upload = final_output_enrichi if final_output_enrichi.exists() else final_output
-            
-            if not file_to_upload.exists():
-                print(f"Aucun fichier final à uploader pour {archive_stem}.")
-                continue
-                
-            hf_repo = os.getenv("HF_REPO_ID", "alihmaou/202510_HM2025_ACCO_ACCORDS_MOBILITES")
+            hf_repo = os.getenv("HF_REPO_ID", "alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES")
             hf_token = os.getenv("HF_TOKEN")
             
             if not hf_token:
                 print("Le token Hugging Face (HF_TOKEN) est introuvable dans le .env.")
             else:
-                upload_hf.upload_to_huggingface(str(file_to_upload), hf_repo, hf_token)
+                # Upload dataset simple
+                if final_output.exists():
+                    simple_name = "AAAAMMJJ_IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES.parquet"
+                    upload_hf.upload_to_huggingface(str(final_output), hf_repo, hf_token, simple_name)
+                
+                # Upload dataset géolocalisé
+                if final_output_enrichi.exists():
+                    geo_name = "AAAAMMJJ_IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet"
+                    upload_hf.upload_to_huggingface(str(final_output_enrichi), hf_repo, hf_token, geo_name)
 
     print("\n=== PIPELINE TERMINÉ AVEC SUCCÈS ===")
 
