@@ -217,9 +217,10 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str):
             df.loc[mask, col] = res_df[col]
 
     # Construire l'URL Légifrance depuis l'ID
+    # Le bon chemin est /acco/id/ (et non /conv_coll/id/)
     if 'ID' in df.columns and 'url_legifrance' not in df.columns:
         df['url_legifrance'] = df['ID'].apply(
-            lambda x: f"https://www.legifrance.gouv.fr/conv_coll/id/{x}" if pd.notna(x) else None
+            lambda x: f"https://www.legifrance.gouv.fr/acco/id/{x}" if pd.notna(x) else None
         )
 
     # Renommer contexte_etendu -> extrait_chunk si nécessaire (compatibilité app)

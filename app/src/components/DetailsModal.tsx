@@ -67,8 +67,9 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
     };
 
     // Construire l'URL Légifrance : priorité au champ url_legifrance, sinon construire depuis l'ID
+    // Le bon chemin Légifrance pour les accords est /acco/id/
     const legifranceUrl = agreement.url_legifrance
-        || (agreement.ID ? `https://www.legifrance.gouv.fr/conv_coll/id/${agreement.ID}` : null);
+        || (agreement.ID ? `https://www.legifrance.gouv.fr/acco/id/${agreement.ID}` : null);
 
     const openGoogleMaps = () => {
         let url = '';
