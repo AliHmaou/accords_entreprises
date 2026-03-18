@@ -2,6 +2,24 @@
 import React from 'react';
 import { Agreement } from '../types';
 
+/**
+ * Formate une date (timestamp ms ou chaîne ISO) en JJ/MM/AAAA.
+ */
+function formatDate(value: string | number | null | undefined): string {
+    if (!value) return '';
+    const num = typeof value === 'number' ? value : Number(value);
+    let date: Date;
+    if (!isNaN(num) && num > 1e10) {
+        date = new Date(num);
+    } else if (typeof value === 'string' && value.length >= 8) {
+        date = new Date(value);
+    } else {
+        return String(value);
+    }
+    if (isNaN(date.getTime())) return String(value);
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
 interface DataTableProps {
     agreements: Agreement[];
     onRowClick: (agreement: Agreement) => void;
@@ -145,7 +163,7 @@ const DataTable: React.FC<DataTableProps> = ({
                                         <HighlightedText text={agreement.mesure_extraite || agreement.resume_mesure_proposee || ''} highlight={highlightTerm} />
                                      </p>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{agreement.DATE_DEPOT}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(agreement.DATE_DEPOT)}</td>
                             </tr>
                         )}) : (
                             <tr>

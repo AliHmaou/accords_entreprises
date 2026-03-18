@@ -25,6 +25,28 @@ const HighlightedText: React.FC<{ text: string; highlight: string }> = ({ text, 
     );
 };
 
+/**
+ * Formate une date qui peut être :
+ * - un timestamp en millisecondes (ex: 1768953600000)
+ * - une chaîne ISO (ex: "2024-03-20" ou "2024-03-20T00:00:00")
+ * Retourne une chaîne lisible "JJ/MM/AAAA" ou la valeur brute si non parsable.
+ */
+function formatDate(value: string | number | null | undefined): string {
+    if (!value) return "Non spécifiée";
+    const num = typeof value === 'number' ? value : Number(value);
+    let date: Date;
+    if (!isNaN(num) && num > 1e10) {
+        // Timestamp en millisecondes
+        date = new Date(num);
+    } else if (typeof value === 'string' && value.length >= 8) {
+        date = new Date(value);
+    } else {
+        return String(value);
+    }
+    if (isNaN(date.getTime())) return String(value);
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
 const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlightTerm }) => {
     // Safely parse moyens_materiels handling version mismatch or missing data
     let moyens: string[] = [];
@@ -146,11 +168,11 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm border-t border-b border-gray-100 dark:border-gray-700 py-4">
                         <div>
                             <span className="block text-gray-500 dark:text-gray-400 text-xs">Date de dépôt</span>
-                            <span className="font-medium text-gray-800 dark:text-gray-200">{agreement.DATE_DEPOT}</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{formatDate(agreement.DATE_DEPOT)}</span>
                         </div>
                         <div>
                             <span className="block text-gray-500 dark:text-gray-400 text-xs">Date de fin</span>
-                            <span className="font-medium text-gray-800 dark:text-gray-200">{agreement.DATE_FIN || "Non spécifiée / Illimitée"}</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{agreement.DATE_FIN ? formatDate(agreement.DATE_FIN) : "Non spécifiée / Illimitée"}</span>
                         </div>
                          {agreement.localisation_departement_code && (
                             <div>
