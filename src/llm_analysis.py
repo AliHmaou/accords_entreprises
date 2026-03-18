@@ -201,21 +201,51 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str):
             
         results.append(res)
         
-    # Créer le dataframe de résultats
+    # Créer le dataframe de résultats et fusionner avec le df principal
     res_df = pd.DataFrame(results, index=to_process.index)
-    
-    # Champs cibles à intégrer au dataframe principal
-    target_columns = ["resume_mesure_proposee", "mot_cle_calcule", "est_mobilites_durables", "moyens_materiels", "moyens_financiers"]
-    
+
+    target_columns = [
+        "resume_mesure_proposee", "mot_cle_calcule",
+        "est_mobilites_durables", "moyens_materiels", "moyens_financiers"
+    ]
+
     for col in target_columns:
         if col not in df.columns:
             df[col] = None
         if col in res_df.columns:
             df.loc[mask, col] = res_df[col]
-            
+
+    # Construire l'URL Légifrance depuis l'ID
+    if 'ID' in df.columns and 'url_legifrance' not in df.columns:
+        df['url_legifrance'] = df['ID'].apply(
+            lambda x: f"https://www.legifrance.gouv.fr/conv_coll/id/{x}" if pd.notna(x) else None
+        )
+
+    # Renommer contexte_etendu -> extrait_chunk si nécessaire (compatibilité app)
+    if 'contexte_etendu' in df.columns and 'extrait_chunk' not in df.columns:
+        df['extrait_chunk'] = df['contexte_etendu']
+
+    # Renommer resume_mesure_proposee -> mesure_extraite si nécessaire (compatibilité app)
+    if 'resume_mesure_proposee' in df.columns and 'mesure_extraite' not in df.columns:
+        df['mesure_extraite'] = df['resume_mesure_proposee'].apply(
+            lambda x: _parse_list_to_str(x) if pd.notna(x) else None
+        )
+
     # Sauvegarde
     df.to_parquet(output_parquet)
     print(f"Analyse terminée. Fichier final sauvegardé dans : {output_parquet}")
+
+
+def _parse_list_to_str(val: str) -> str:
+    """Convertit une liste JSON en string ou retourne la valeur telle quelle."""
+    import json
+    try:
+        parsed = json.loads(val)
+        if isinstance(parsed, list):
+            return " | ".join(str(m) for m in parsed)
+    except Exception:
+        pass
+    return str(val)
 
 if __name__ == "__main__":
     input_path = "ACCORDS_PROFESSIONNELS/data/outputs/interim/metadata_with_context.parquet"

@@ -129,10 +129,14 @@ const Dashboard: React.FC = () => {
                 )`;
             }
 
-            // Measure Label Search
+            // Measure Label Search (cherche dans mesure_extraite, resume_mesure_proposee et theme_recherche)
             if (measureSearch) {
                 const term = measureSearch.replace(/'/g, "''").toLowerCase();
-                query += ` AND lower(mesure_extraite) LIKE '%${term}%'`;
+                query += ` AND (
+                    lower(COALESCE(mesure_extraite, '')) LIKE '%${term}%' OR
+                    lower(COALESCE(resume_mesure_proposee, '')) LIKE '%${term}%' OR
+                    lower(COALESCE(theme_recherche, '')) LIKE '%${term}%'
+                )`;
             }
 
             // Sector Chips Filter (OR logic inside chips, but AND logic with other filters)
@@ -295,9 +299,11 @@ const Dashboard: React.FC = () => {
         if (!filteredAgreements || filteredAgreements.length === 0) return [];
         const counts: Record<string, number> = {};
         filteredAgreements.forEach(a => {
-            if (a.mesure_extraite) {
-                const label = a.mesure_extraite.trim();
-                counts[label] = (counts[label] || 0) + 1;
+            // Priorité : theme_recherche (mot-clé NLP), sinon mesure_extraite
+            const label = a.theme_recherche || a.mesure_extraite || a.resume_mesure_proposee;
+            if (label) {
+                const key = label.trim();
+                counts[key] = (counts[key] || 0) + 1;
             }
         });
         return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 10);

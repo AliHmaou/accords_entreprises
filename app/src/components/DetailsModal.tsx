@@ -66,6 +66,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
         return { __html: html };
     };
 
+    // Construire l'URL Légifrance : priorité au champ url_legifrance, sinon construire depuis l'ID
+    const legifranceUrl = agreement.url_legifrance
+        || (agreement.ID ? `https://www.legifrance.gouv.fr/conv_coll/id/${agreement.ID}` : null);
+
     const openGoogleMaps = () => {
         let url = '';
         if (agreement.localisation_lat && agreement.localisation_lon) {
@@ -164,15 +168,20 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                             <span className="font-medium text-gray-800 dark:text-gray-200">{agreement.SYNDICATS}</span>
                         </div>
                          <div>
-                            <span className="block text-gray-500 dark:text-gray-400 text-xs">Thème Recherche</span>
-                            <span className="font-medium text-gray-800 dark:text-gray-200">{agreement.theme_recherche}</span>
+                            <span className="block text-gray-500 dark:text-gray-400 text-xs">Mot-clé trouvé</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">
+                                {agreement.theme_recherche}
+                                {agreement.categorie_mot_cle && (
+                                    <span className="ml-2 text-xs text-indigo-600">({agreement.categorie_mot_cle})</span>
+                                )}
+                            </span>
                         </div>
                     </div>
-                    
+
                     <div>
                         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">⚡ Mesure extraite (IA)</h3>
                         <blockquote className="text-gray-700 dark:text-gray-300 bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-md border-l-4 border-indigo-500 italic">
-                            "<HighlightedText text={agreement.mesure_extraite} highlight={highlightTerm} />"
+                            "<HighlightedText text={agreement.mesure_extraite || agreement.resume_mesure_proposee || '(non disponible)'} highlight={highlightTerm} />"
                         </blockquote>
                     </div>
                     
@@ -190,19 +199,28 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                     <div>
                         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📄 Extrait du texte original</h3>
                         <div className="prose prose-sm dark:prose-invert max-w-none p-4 bg-gray-50 dark:bg-gray-900/50 rounded-md text-gray-700 dark:text-gray-300 text-justify leading-relaxed border border-gray-200 dark:border-gray-700">
-                           <div dangerouslySetInnerHTML={getMarkdownContent(agreement.extrait_chunk, highlightTerm)} />
+                           <div dangerouslySetInnerHTML={getMarkdownContent(agreement.extrait_chunk || agreement.contexte_etendu || '', highlightTerm)} />
                         </div>
                     </div>
                 </main>
                 
                 <footer className="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 text-right">
-                    <a href={agreement.url_legifrance} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition-colors">
-                        Consulter sur Légifrance
-                        <svg className="ml-2 -mr-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                            <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-                        </svg>
-                    </a>
+                    {legifranceUrl ? (
+                        <a
+                            href={legifranceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition-colors"
+                        >
+                            Consulter sur Légifrance
+                            <svg className="ml-2 -mr-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                                <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                            </svg>
+                        </a>
+                    ) : (
+                        <span className="text-sm text-gray-400 italic">Lien Légifrance non disponible</span>
+                    )}
                 </footer>
             </div>
         </div>

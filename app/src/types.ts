@@ -1,8 +1,10 @@
 
 export interface Agreement {
-  url_legifrance: string;
-  mesure_extraite: string;
+  // Identifiants
   ID: string;
+  url_legifrance?: string;
+
+  // Métadonnées accord
   RAISON_SOCIALE: string;
   SIRET: string;
   TITRE_TXT: string;
@@ -15,15 +17,21 @@ export interface Agreement {
   SYNDICATS: string;
   DOCUMENT_BUREAUTIQUE: string;
   NUMERO: string;
-  theme_recherche: string;
-  fichier_markdown: string;
-  extrait_chunk: string;
-  contexte_etendu: string;
-  resume_mesure_proposee: string;
-  mot_cle_calcule: string;
-  est_mobilites_durables: string;
-  moyens_materiels: string;
-  moyens_financiers: string;
+
+  // Champs NLP (une ligne par mot-clé)
+  theme_recherche: string;       // mot-clé trouvé
+  categorie_mot_cle?: string;    // catégorie du mot-clé
+  extrait_chunk: string;         // contexte autour du mot-clé (= contexte_etendu)
+  contexte_etendu?: string;      // alias legacy
+
+  // Champs LLM
+  mesure_extraite?: string;      // mesure extraite par IA (= resume_mesure_proposee parsé)
+  resume_mesure_proposee?: string;
+  mot_cle_calcule?: string;
+  est_mobilites_durables?: string;
+  moyens_materiels?: string;
+  moyens_financiers?: string;
+  fichier_markdown?: string;
 
   // Localization fields (produced by geoloc_epci.py)
   localisation_lat?: number;
