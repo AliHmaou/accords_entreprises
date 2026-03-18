@@ -157,7 +157,8 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str):
     for idx, row in iterator:
         count += 1
         doc_id = row['ID']
-        context = row['contexte_etendu']
+        # Compatibilité : le nouveau pipeline utilise 'extrait_chunk', l'ancien 'contexte_etendu'
+        context = row.get('extrait_chunk') or row.get('contexte_etendu')
         
         if type(iterator) is not type and not hasattr(iterator, 'set_description'):
             # Si pas de tqdm, on affiche des logs textuels tous les 10 accords
