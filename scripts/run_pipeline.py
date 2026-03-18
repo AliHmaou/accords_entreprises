@@ -156,14 +156,17 @@ def run():
             df_temp = pd.read_parquet(str(metadata_with_context))
             
             if 'DATE_TEXTE' in df_temp.columns:
-                df_temp['DATE_TEXTE_DT'] = pd.to_datetime(df_temp['DATE_TEXTE'], errors='coerce')
-                year_mask = df_temp['DATE_TEXTE_DT'].dt.year == int(target_year)
-                df_temp.loc[~year_mask, 'mentionne_mobilite'] = False
-                
-                print(f"Nombre d'accords évoquant la mobilité dans l'année {target_year}: {df_temp['mentionne_mobilite'].sum()}")
+                if target_year.lower() == 'all':
+                    print(f"Traitement sur toutes les années. Nombre d'accords évoquant la mobilité: {df_temp['mentionne_mobilite'].sum()}")
+                else:
+                    df_temp['DATE_TEXTE_DT'] = pd.to_datetime(df_temp['DATE_TEXTE'], errors='coerce')
+                    year_mask = df_temp['DATE_TEXTE_DT'].dt.year == int(target_year)
+                    df_temp.loc[~year_mask, 'mentionne_mobilite'] = False
+                    print(f"Nombre d'accords évoquant la mobilité dans l'année {target_year}: {df_temp['mentionne_mobilite'].sum()}")
+                    df_temp = df_temp.drop(columns=['DATE_TEXTE_DT'])
                 
                 temp_context = metadata_with_context.with_suffix('.temp.parquet')
-                df_temp.drop(columns=['DATE_TEXTE_DT']).to_parquet(temp_context)
+                df_temp.to_parquet(temp_context)
                 
                 llm_analysis.process_llm(str(temp_context), str(final_output), str(kw_csv))
                 
@@ -199,12 +202,12 @@ def run():
             else:
                 # Upload dataset simple
                 if final_output.exists():
-                    simple_name = "AAAAMMJJ_IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES.parquet"
+                    simple_name = "IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES.parquet"
                     upload_hf.upload_to_huggingface(str(final_output), hf_repo, hf_token, simple_name)
                 
                 # Upload dataset géolocalisé
                 if final_output_enrichi.exists():
-                    geo_name = "AAAAMMJJ_IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet"
+                    geo_name = "IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet"
                     upload_hf.upload_to_huggingface(str(final_output_enrichi), hf_repo, hf_token, geo_name)
 
     print("\n=== PIPELINE TERMINÉ AVEC SUCCÈS ===")
