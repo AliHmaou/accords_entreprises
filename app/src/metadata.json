@@ -1,0 +1,5 @@
+{
+  "name": "Dashboard d'Exploration d'Accords d'Entreprise",
+  "description": "Une application web pour visualiser et explorer les données sur les accords d'entreprise en France, en se concentrant sur les mesures de mobilité durable.",
+  "requestFramePermissions": []
+}
