@@ -9,6 +9,7 @@ import DistributionChart from './charts/DistributionChart';
 import MapTab from './MapTab';
 import AboutData from './AboutData';
 import AboutDashboard from './AboutDashboard';
+import LiveSQL from './LiveSQL';
 import { initDuckDB, loadParquetFile, loadJsonJSONL, runQuery } from '../duckdbClient';
 
 // Updated URL for the new enriched dataset
@@ -16,7 +17,7 @@ const PARQUET_URL = import.meta.env.VITE_HF_PARQUET_URL || "https://huggingface.
 const TABLE_NAME = "agreements";
 const ITEMS_PER_PAGE = 20;
 
-type TabType = 'stats' | 'measures' | 'map' | 'about_data' | 'about_dash';
+type TabType = 'stats' | 'measures' | 'map' | 'live_sql' | 'about_data' | 'about_dash';
 
 // Type for the location filter item
 interface LocationItem {
@@ -590,6 +591,12 @@ const Dashboard: React.FC = () => {
                         Mesures et Accords
                     </button>
                     <button
+                        onClick={() => setActiveTab('live_sql')}
+                        className={`${activeTab === 'live_sql' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                        🦆 Live SQL
+                    </button>
+                    <button
                         onClick={() => setActiveTab('about_data')}
                         className={`${activeTab === 'about_data' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                     >
@@ -642,6 +649,12 @@ const Dashboard: React.FC = () => {
                             onRowClick={setSelectedAgreement} 
                             highlightTerm={globalSearch || measureSearch} 
                         />
+                    </div>
+                )}
+
+                {activeTab === 'live_sql' && (
+                    <div className="animate-fade-in">
+                        <LiveSQL />
                     </div>
                 )}
 
