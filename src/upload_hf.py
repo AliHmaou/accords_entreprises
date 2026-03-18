@@ -16,7 +16,7 @@ def upload_to_huggingface(file_path: str, repo_id: str, hf_token: str):
     api = HfApi(token=hf_token)
     
     # We use a constant name for simplicity
-    file_name_in_repo = "data_accords_mobilites.parquet"
+    file_name_in_repo = "202511_IDFM_ACCO_ACCORDS_MOBILITES_MESURES_LOCALISATION.parquet"
     
     print(f"Téléversement de {file_path} vers {repo_id}/{file_name_in_repo}...")
     
