@@ -32,7 +32,9 @@ export interface Agreement {
   localisation_epci_id?: string;
   localisation_epci_nom?: string;
   localisation_departement_code?: string;
+  localisation_departement_nom?: string;
   localisation_region_code?: string;
+  localisation_region_nom?: string;
   localisation_ept_id?: string;
   localisation_ept_nom?: string;
 
@@ -40,6 +42,5 @@ export interface Agreement {
   est_mobilites_durables_v2?: string;
   moyens_materiels_v2?: string;
   localisation_region?: string;
-  localisation_departement_nom?: string;
   localisation_nom_commune?: string;
 }

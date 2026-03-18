@@ -77,7 +77,7 @@ const Dashboard: React.FC = () => {
                 // Load Geographic Options (Distinct Regions, EPCI)
                 // Using UNION to get a flat list
                 const geoQuery = `
-                    SELECT DISTINCT localisation_region_code as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region_code IS NOT NULL
+                    SELECT DISTINCT localisation_region_nom as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region_nom IS NOT NULL
                     UNION
                     SELECT DISTINCT localisation_epci_nom as name, 'EPCI' as type FROM ${TABLE_NAME} WHERE localisation_epci_nom IS NOT NULL
                     ORDER BY name
@@ -147,7 +147,7 @@ const Dashboard: React.FC = () => {
                 selectedLocations.forEach(loc => {
                     const safeName = loc.name.replace(/'/g, "''");
                     if (loc.type === 'Région') {
-                        conditions.push(`localisation_region_code = '${safeName}'`);
+                        conditions.push(`localisation_region_nom = '${safeName}'`);
                     } else if (loc.type === 'EPCI') {
                         conditions.push(`localisation_epci_nom = '${safeName}'`);
                     }
@@ -163,9 +163,9 @@ const Dashboard: React.FC = () => {
                 query += ` AND lower(CAST(est_mobilites_durables AS VARCHAR)) IN ('true', '1', 'oui')`;
             }
 
-            // Île-de-France Toggle (code région INSEE = '11')
+            // Île-de-France Toggle
             if (onlyIDF) {
-                query += ` AND localisation_region_code = '11'`;
+                query += ` AND localisation_region_nom = 'Île-de-France'`;
             }
 
             try {
@@ -216,7 +216,7 @@ const Dashboard: React.FC = () => {
 
                 // Refresh Geo options
                 const geoQuery = `
-                    SELECT DISTINCT localisation_region_code as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region_code IS NOT NULL
+                    SELECT DISTINCT localisation_region_nom as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region_nom IS NOT NULL
                     UNION
                     SELECT DISTINCT localisation_epci_nom as name, 'EPCI' as type FROM ${TABLE_NAME} WHERE localisation_epci_nom IS NOT NULL
                     ORDER BY name
@@ -321,7 +321,7 @@ const Dashboard: React.FC = () => {
         if (!filteredAgreements) return [];
         const counts: Record<string, number> = {};
         filteredAgreements.forEach(a => {
-            const reg = a.localisation_region_code || a.localisation_region;
+            const reg = a.localisation_region_nom || a.localisation_region;
             if (reg) {
                 counts[reg] = (counts[reg] || 0) + 1;
             }
@@ -333,7 +333,7 @@ const Dashboard: React.FC = () => {
         if (!filteredAgreements) return [];
         const counts: Record<string, number> = {};
         filteredAgreements.forEach(a => {
-            const dep = a.localisation_departement_code || a.localisation_departement_nom;
+            const dep = a.localisation_departement_nom || a.localisation_departement_code;
             if (dep) {
                 counts[dep] = (counts[dep] || 0) + 1;
             }
@@ -456,7 +456,7 @@ const Dashboard: React.FC = () => {
                     {/* Geo Location Filter (Hybrid) */}
                     <div className="md:col-span-3 relative" ref={geoWrapperRef}>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Lieu (Région INSEE, EPCI)
+                            Lieu (Région, EPCI)
                         </label>
                         <input
                             type="text"
@@ -479,7 +479,7 @@ const Dashboard: React.FC = () => {
                                     >
                                         <span className="truncate">{loc.name}</span>
                                         <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${getBadgeColor(loc.type)}`}>
-                                            {loc.type === 'Région' ? 'Région (code)' : loc.type}
+                                            {loc.type}
                                         </span>
                                     </li>
                                 )) : (

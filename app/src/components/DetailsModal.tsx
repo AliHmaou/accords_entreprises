@@ -124,9 +124,9 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
                              Code APE: {agreement.CODE_APE}
                         </span>
-                         {(agreement.localisation_region_code || agreement.localisation_region) && (
+                         {(agreement.localisation_region_nom || agreement.localisation_region) && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                📍 Région {agreement.localisation_region_code || agreement.localisation_region}
+                                📍 {agreement.localisation_region_nom || agreement.localisation_region}
                             </span>
                         )}
                     </div>
