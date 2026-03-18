@@ -74,14 +74,12 @@ const Dashboard: React.FC = () => {
                 const sectorList = sectorResult.map((r: any) => r.SECTEUR).filter(Boolean);
                 setSectors(sectorList);
 
-                // Load Geographic Options (Distinct Regions, EPCI, Communes)
+                // Load Geographic Options (Distinct Regions, EPCI)
                 // Using UNION to get a flat list
                 const geoQuery = `
-                    SELECT DISTINCT localisation_region as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region IS NOT NULL
+                    SELECT DISTINCT localisation_region_code as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region_code IS NOT NULL
                     UNION
                     SELECT DISTINCT localisation_epci_nom as name, 'EPCI' as type FROM ${TABLE_NAME} WHERE localisation_epci_nom IS NOT NULL
-                    UNION
-                    SELECT DISTINCT localisation_nom_commune as name, 'Commune' as type FROM ${TABLE_NAME} WHERE localisation_nom_commune IS NOT NULL
                     ORDER BY name
                 `;
                 const geoResult = await runQuery(geoQuery);
@@ -143,17 +141,15 @@ const Dashboard: React.FC = () => {
                 query += ` AND SECTEUR IN (${sectorList})`;
             }
 
-            // Location Chips Filter (Hybrid: Region OR EPCI OR Commune)
+            // Location Chips Filter (Hybrid: Region OR EPCI)
             if (selectedLocations.length > 0) {
                 const conditions: string[] = [];
                 selectedLocations.forEach(loc => {
                     const safeName = loc.name.replace(/'/g, "''");
                     if (loc.type === 'Région') {
-                        conditions.push(`localisation_region = '${safeName}'`);
+                        conditions.push(`localisation_region_code = '${safeName}'`);
                     } else if (loc.type === 'EPCI') {
                         conditions.push(`localisation_epci_nom = '${safeName}'`);
-                    } else if (loc.type === 'Commune') {
-                        conditions.push(`localisation_nom_commune = '${safeName}'`);
                     }
                 });
                 if (conditions.length > 0) {
@@ -167,9 +163,9 @@ const Dashboard: React.FC = () => {
                 query += ` AND lower(CAST(est_mobilites_durables AS VARCHAR)) IN ('true', '1', 'oui')`;
             }
 
-            // Île-de-France Toggle
+            // Île-de-France Toggle (code région INSEE = '11')
             if (onlyIDF) {
-                query += ` AND localisation_region = 'Île-de-France'`;
+                query += ` AND localisation_region_code = '11'`;
             }
 
             try {
@@ -220,11 +216,9 @@ const Dashboard: React.FC = () => {
 
                 // Refresh Geo options
                 const geoQuery = `
-                    SELECT DISTINCT localisation_region as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region IS NOT NULL
+                    SELECT DISTINCT localisation_region_code as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region_code IS NOT NULL
                     UNION
                     SELECT DISTINCT localisation_epci_nom as name, 'EPCI' as type FROM ${TABLE_NAME} WHERE localisation_epci_nom IS NOT NULL
-                    UNION
-                    SELECT DISTINCT localisation_nom_commune as name, 'Commune' as type FROM ${TABLE_NAME} WHERE localisation_nom_commune IS NOT NULL
                     ORDER BY name
                 `;
                 const geoResult = await runQuery(geoQuery);
@@ -327,8 +321,9 @@ const Dashboard: React.FC = () => {
         if (!filteredAgreements) return [];
         const counts: Record<string, number> = {};
         filteredAgreements.forEach(a => {
-            if (a.localisation_region) {
-                counts[a.localisation_region] = (counts[a.localisation_region] || 0) + 1;
+            const reg = a.localisation_region_code || a.localisation_region;
+            if (reg) {
+                counts[reg] = (counts[reg] || 0) + 1;
             }
         });
         return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
@@ -338,8 +333,9 @@ const Dashboard: React.FC = () => {
         if (!filteredAgreements) return [];
         const counts: Record<string, number> = {};
         filteredAgreements.forEach(a => {
-            if (a.localisation_departement_nom) {
-                counts[a.localisation_departement_nom] = (counts[a.localisation_departement_nom] || 0) + 1;
+            const dep = a.localisation_departement_code || a.localisation_departement_nom;
+            if (dep) {
+                counts[dep] = (counts[dep] || 0) + 1;
             }
         });
         return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 20);
@@ -460,7 +456,7 @@ const Dashboard: React.FC = () => {
                     {/* Geo Location Filter (Hybrid) */}
                     <div className="md:col-span-3 relative" ref={geoWrapperRef}>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Lieu (Région, EPCI, Commune)
+                            Lieu (Région INSEE, EPCI)
                         </label>
                         <input
                             type="text"
@@ -483,7 +479,7 @@ const Dashboard: React.FC = () => {
                                     >
                                         <span className="truncate">{loc.name}</span>
                                         <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${getBadgeColor(loc.type)}`}>
-                                            {loc.type}
+                                            {loc.type === 'Région' ? 'Région (code)' : loc.type}
                                         </span>
                                     </li>
                                 )) : (

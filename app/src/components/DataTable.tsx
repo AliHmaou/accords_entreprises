@@ -98,7 +98,7 @@ const DataTable: React.FC<DataTableProps> = ({
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {agreements.length > 0 ? agreements.map((agreement, index) => {
                              // Robust check for mobility flag
-                             const mobilityVal = String((agreement as any).est_mobilites_durables || agreement.est_mobilites_durables_v2).toLowerCase();
+                             const mobilityVal = String(agreement.est_mobilites_durables || agreement.est_mobilites_durables_v2 || '').toLowerCase();
                              const isMobility = ['true', '1', 'oui'].includes(mobilityVal);
                              
                              // Using ID and index to ensure uniqueness for React reconciliation

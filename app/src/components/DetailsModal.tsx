@@ -29,11 +29,14 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
     // Safely parse moyens_materiels handling version mismatch or missing data
     let moyens: string[] = [];
     try {
-        const rawMoyens = agreement.moyens_materiels_v2 || (agreement as any).moyens_materiels;
+        const rawMoyens = agreement.moyens_materiels || agreement.moyens_materiels_v2;
         if (rawMoyens) {
-            const parsed = JSON.parse(rawMoyens);
-            if (Array.isArray(parsed)) {
-                moyens = parsed;
+            // Support both JSON array and pipe-separated string
+            if (rawMoyens.startsWith('[')) {
+                const parsed = JSON.parse(rawMoyens);
+                if (Array.isArray(parsed)) moyens = parsed;
+            } else {
+                moyens = rawMoyens.split(' | ').filter(Boolean);
             }
         }
     } catch (e) {
@@ -42,7 +45,7 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
     }
     
     // Handle est_mobilites_durables (bool or string)
-    const mobilityVal = String((agreement as any).est_mobilites_durables || agreement.est_mobilites_durables_v2).toLowerCase();
+    const mobilityVal = String(agreement.est_mobilites_durables || agreement.est_mobilites_durables_v2 || '').toLowerCase();
     const isMobility = ['true', '1', 'oui'].includes(mobilityVal);
 
     const getMarkdownContent = (text: string, highlight: string) => {
@@ -121,9 +124,9 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
                              Code APE: {agreement.CODE_APE}
                         </span>
-                         {agreement.localisation_region && (
+                         {(agreement.localisation_region_code || agreement.localisation_region) && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                📍 {agreement.localisation_region}
+                                📍 Région {agreement.localisation_region_code || agreement.localisation_region}
                             </span>
                         )}
                     </div>
@@ -144,10 +147,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                             <span className="block text-gray-500 dark:text-gray-400 text-xs">Date de fin</span>
                             <span className="font-medium text-gray-800 dark:text-gray-200">{agreement.DATE_FIN || "Non spécifiée / Illimitée"}</span>
                         </div>
-                         {agreement.localisation_departement_nom && (
+                         {agreement.localisation_departement_code && (
                             <div>
                                 <span className="block text-gray-500 dark:text-gray-400 text-xs">Département</span>
-                                <span className="font-medium text-gray-800 dark:text-gray-200">{agreement.localisation_departement_nom} ({agreement.localisation_departement_code})</span>
+                                <span className="font-medium text-gray-800 dark:text-gray-200">{agreement.localisation_departement_nom || agreement.localisation_departement_code}</span>
                             </div>
                         )}
                         {agreement.localisation_epci_nom && (

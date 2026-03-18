@@ -50,10 +50,15 @@ def enrich_accords_with_geoloc(accords_parquet: str, epci_parquet: str, ept_parq
     query = f"""
     SELECT 
         a.*,
-        s.x, s.y, s.epsg, s.plg_qp24, s.plg_iris, s.plg_zus, s.plg_qp15, s.plg_qva, s.plg_code_commune,
-        s.y_latitude, s.x_longitude,
-        e.EPCI, e.LIBEPCI, e.DEP, e.REG,
-        t.EPT, t.LIBEPT
+        s.y_latitude AS localisation_lat,
+        s.x_longitude AS localisation_lon,
+        s.plg_code_commune AS localisation_code_commune,
+        e.EPCI AS localisation_epci_id,
+        e.LIBEPCI AS localisation_epci_nom,
+        e.DEP AS localisation_departement_code,
+        e.REG AS localisation_region_code,
+        t.EPT AS localisation_ept_id,
+        t.LIBEPT AS localisation_ept_nom
     FROM read_parquet('{accords_parquet}') a
     LEFT JOIN read_parquet('{sirene_url}') s
         ON a.SIRET = s.siret
