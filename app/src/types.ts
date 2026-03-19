@@ -28,6 +28,7 @@ export interface Agreement {
   mesure_extraite?: string;      // mesure extraite par IA (= resume_mesure_proposee parsé)
   resume_mesure_proposee?: string;
   mot_cle_calcule?: string;
+  mentionne_mobilite_ia?: string; // confirmation IA que l'extrait traite bien de mobilité
   est_mobilites_durables?: string;
   moyens_materiels?: string;
   moyens_financiers?: string;

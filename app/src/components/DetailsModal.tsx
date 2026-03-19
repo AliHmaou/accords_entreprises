@@ -70,6 +70,11 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
     const mobilityVal = String(agreement.est_mobilites_durables || agreement.est_mobilites_durables_v2 || '').toLowerCase();
     const isMobility = ['true', '1', 'oui'].includes(mobilityVal);
 
+    // Handle mentionne_mobilite_ia
+    const mentionneIAVal = String(agreement.mentionne_mobilite_ia || '').toLowerCase();
+    const isMentionneIA = ['oui', 'true', '1'].includes(mentionneIAVal);
+    const isMentionneIANo = mentionneIAVal === 'non' || mentionneIAVal === 'false' || mentionneIAVal === '0';
+
     const getMarkdownContent = (text: string, highlight: string) => {
         if (!text) return { __html: '' };
 
@@ -140,6 +145,16 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                 <main className="p-6 space-y-5 overflow-y-auto">
                     {/* Key Attributes */}
                     <div className="flex flex-wrap gap-2">
+                        {isMentionneIA && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200" title="L'IA a confirmé que cet extrait traite bien de mobilité des employés">
+                                🤖 Mobilité confirmée IA
+                            </span>
+                        )}
+                        {isMentionneIANo && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" title="L'IA a détecté que le mot-clé est probablement un faux positif lexical">
+                                ⚠️ Faux positif probable
+                            </span>
+                        )}
                         {isMobility && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 🌿 Mobilités Durables

@@ -17,6 +17,7 @@ Répond EXCLUSIVEMENT en JSON valide selon cette structure :
   "ID": "{doc_id}",
   "mesures_proposees": ["mesure 1", "mesure 2"],
   "mot_cle": "un seul mot-clé issu de cette liste : {categories_str}",
+  "mentionne_mobilite_ia": "Oui ou Non",
   "est_mobilites_durables": "Oui ou Non",
   "moyens_materiels": ["moyen 1", "moyen 2"],
   "moyens_financiers": ["moyen financier 1", "moyen financier 2"]
@@ -26,6 +27,7 @@ Instructions pour les champs :
 * "ID": Rappeler l'identifiant du texte.
 * "mesures_proposees": Mesures concrètes proposées concernant les mobilités sous forme d'une liste (en 10 mots max par mesure, commençant par un verbe à l'infinitif, un complément d'objet et un complément de moyen).
 * "mot_cle": Mot clé principal parmi les catégories fournies (un seul mot clé, possiblement composé de 3 mots maximum).
+* "mentionne_mobilite_ia": Indicateur confirmant que l'extrait concerne bien le sujet de la mobilité des employés.
 * "est_mobilites_durables": Indicateur de promotion des mobilités durables et des transports en commun.
 * "moyens_materiels": Moyens matériels concernant les mobilités lorsqu'ils sont mis à disposition par l'entreprise, sous la forme d'une liste.
 * "moyens_financiers": Moyens financiers concernant les mobilités proposés par l'entreprise sous la forme d'une liste.

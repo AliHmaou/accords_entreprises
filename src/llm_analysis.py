@@ -11,6 +11,7 @@ def analyze_context_mock(doc_id: str, context: str, categories: list) -> dict:
         "ID": doc_id,
         "mesures_proposees": ["promouvoir le vélo en entreprise"],
         "mot_cle": categories[0] if categories else "Vélo",
+        "mentionne_mobilite_ia": "Oui",
         "est_mobilites_durables": "Oui",
         "moyens_materiels": ["parc à vélos"],
         "moyens_financiers": ["indemnité kilométrique"]
@@ -62,6 +63,7 @@ Répond EXCLUSIVEMENT en JSON valide selon cette structure :
   "ID": "{doc_id}",
   "mesures_proposees": ["mesure 1", "mesure 2"],
   "mot_cle": "un seul mot-clé issu de cette liste : {categories_str}",
+  "mentionne_mobilite_ia": "Oui ou Non",
   "est_mobilites_durables": "Oui ou Non",
   "moyens_materiels": ["moyen 1", "moyen 2"],
   "moyens_financiers": ["moyen financier 1", "moyen financier 2"]
@@ -69,17 +71,27 @@ Répond EXCLUSIVEMENT en JSON valide selon cette structure :
 
 Instructions pour les champs :
 * "ID": Rappeler l'identifiant du texte.
-* "mesures_proposees": Mesures concrètes proposées concernant les mobilités sous forme d'une liste (en 10 mots max par mesure, commençant par un verbe à l'infinitif, un complément d'objet et un complément de moyen).
-* "mot_cle": Mot clé principal parmi les catégories fournies (un seul mot clé, possiblement composé de 3 mots maximum).
-* "est_mobilites_durables": Indicateur de promotion des mobilités durables et des transports en commun.
-* "moyens_materiels": Moyens matériels concernant les mobilités lorsqu'ils sont mis à disposition par l'entreprise, sous la forme d'une liste.
-* "moyens_financiers": Moyens financiers concernant les mobilités proposés par l'entreprise sous la forme d'une liste.
+* "mesures_proposees": Mesures concrètes proposées concernant les mobilités sous forme d'une liste
+  (en 10 mots max par mesure, commençant par un verbe à l'infinitif, un complément d'objet et un
+  complément de moyen).
+* "mot_cle": Mot clé principal parmi les catégories fournies (un seul mot clé, possiblement composé
+  de 3 mots maximum).
+* "mentionne_mobilite_ia": Répond "Oui" si l'extrait traite réellement de la mobilité des employés
+  (déplacements domicile-travail, transports, vélo, covoiturage, etc.). Répond "Non" si le mot-clé
+  trouvé est une coïncidence lexicale (ex: "en train de", "voiture" dans un autre contexte).
+* "est_mobilites_durables": Indicateur de promotion des mobilités durables et des transports en
+  commun (uniquement si mentionne_mobilite_ia est "Oui").
+* "moyens_materiels": Moyens matériels concernant les mobilités lorsqu'ils sont mis à disposition
+  par l'entreprise, sous la forme d'une liste.
+* "moyens_financiers": Moyens financiers concernant les mobilités proposés par l'entreprise sous
+  la forme d'une liste.
 """
 
     fallback_result = {
         "ID": doc_id,
         "mesures_proposees": [],
         "mot_cle": None,
+        "mentionne_mobilite_ia": None,
         "est_mobilites_durables": None,
         "moyens_materiels": [],
         "moyens_financiers": []
@@ -199,15 +211,17 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str):
             
         res["mot_cle_calcule"] = str(res.get("mot_cle", ""))
         res["est_mobilites_durables"] = str(res.get("est_mobilites_durables", ""))
-            
+        res["mentionne_mobilite_ia"] = str(res.get("mentionne_mobilite_ia", ""))
+
         results.append(res)
-        
+
     # Créer le dataframe de résultats et fusionner avec le df principal
     res_df = pd.DataFrame(results, index=to_process.index)
 
     target_columns = [
         "resume_mesure_proposee", "mot_cle_calcule",
-        "est_mobilites_durables", "moyens_materiels", "moyens_financiers"
+        "mentionne_mobilite_ia", "est_mobilites_durables",
+        "moyens_materiels", "moyens_financiers"
     ]
 
     for col in target_columns:
@@ -248,6 +262,7 @@ def _parse_list_to_str(val: str) -> str:
     except Exception:
         pass
     return str(val)
+
 
 if __name__ == "__main__":
     input_path = "ACCORDS_PROFESSIONNELS/data/outputs/interim/metadata_with_context.parquet"

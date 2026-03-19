@@ -37,6 +37,7 @@ const Dashboard: React.FC = () => {
     const [globalSearch, setGlobalSearch] = useState('');
     const [measureSearch, setMeasureSearch] = useState('');
     const [onlyMobility, setOnlyMobility] = useState(false);
+    const [onlyMobiliteIA, setOnlyMobiliteIA] = useState(false);
     const [onlyIDF, setOnlyIDF] = useState(false); 
     
     // Sector Chips State
@@ -162,6 +163,11 @@ const Dashboard: React.FC = () => {
                 }
             }
 
+            // Mobilité confirmée par IA Toggle
+            if (onlyMobiliteIA) {
+                query += ` AND lower(CAST(mentionne_mobilite_ia AS VARCHAR)) IN ('oui', 'true', '1')`;
+            }
+
             // Mobility Only Toggle
             if (onlyMobility) {
                 // Using CAST to VARCHAR and LOWER to handle diverse formats (true, 1, oui, True, TRUE)
@@ -196,7 +202,7 @@ const Dashboard: React.FC = () => {
             isCancelled = true;
             clearTimeout(timer);
         };
-    }, [globalSearch, measureSearch, selectedSectors, selectedLocations, onlyMobility, onlyIDF, dbReady]);
+    }, [globalSearch, measureSearch, selectedSectors, selectedLocations, onlyMobility, onlyMobiliteIA, onlyIDF, dbReady]);
 
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -517,6 +523,22 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-6 pt-2">
+                    {/* Mobilité confirmée IA */}
+                    <div className="flex items-center">
+                        <button 
+                            type="button" 
+                            className={`${onlyMobiliteIA ? 'bg-teal-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500`}
+                            role="switch"
+                            aria-checked={onlyMobiliteIA}
+                            onClick={() => setOnlyMobiliteIA(!onlyMobiliteIA)}
+                        >
+                            <span className="sr-only">Mobilité confirmée par IA uniquement</span>
+                            <span aria-hidden="true" className={`${onlyMobiliteIA ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
+                        </button>
+                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur mentionne_mobilite_ia : l'IA a confirmé que l'extrait traite bien de mobilité (évite les faux positifs lexicaux)">
+                            🤖 Mobilité confirmée IA
+                        </span>
+                    </div>
                     {/* Mobility Only */}
                     <div className="flex items-center">
                         <button 
