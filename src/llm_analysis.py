@@ -126,18 +126,41 @@ Instructions pour les champs :
                     
     return fallback_result
 
+def _normalize_result(res: dict) -> dict:
+    """Normalise les champs d'un résultat LLM (listes -> str, etc.)."""
+    if isinstance(res.get("mesures_proposees"), list):
+        res["resume_mesure_proposee"] = " | ".join([str(m) for m in res["mesures_proposees"]])
+    else:
+        res["resume_mesure_proposee"] = str(res.get("mesures_proposees", ""))
+
+    if isinstance(res.get("moyens_materiels"), list):
+        res["moyens_materiels"] = " | ".join([str(m) for m in res["moyens_materiels"]])
+    else:
+        res["moyens_materiels"] = str(res.get("moyens_materiels", ""))
+
+    if isinstance(res.get("moyens_financiers"), list):
+        res["moyens_financiers"] = " | ".join([str(m) for m in res["moyens_financiers"]])
+    else:
+        res["moyens_financiers"] = str(res.get("moyens_financiers", ""))
+
+    res["mot_cle_calcule"] = str(res.get("mot_cle", ""))
+    res["est_mobilites_durables"] = str(res.get("est_mobilites_durables", ""))
+    res["mentionne_mobilite_ia"] = str(res.get("mentionne_mobilite_ia", ""))
+    return res
+
+
 def process_llm(input_parquet: str, output_parquet: str, categories_csv: str):
     df = pd.read_parquet(input_parquet)
-    
+
     # Lecture des catégories
     cat_df = pd.read_csv(categories_csv)
     categories = cat_df.iloc[:, 0].dropna().unique().tolist()
-    
+
     # Paramétrage de l'API (Azure, Groq, OpenAI...)
     api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("GROQ_API_KEY")
     base_url = os.getenv("LLM_BASE_URL")
     model = os.getenv("LLM_MODEL", "gpt-4o-mini")
-    
+
     client = None
     if api_key:
         client_kwargs = {"api_key": api_key}
@@ -147,77 +170,76 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str):
         print(f"Clé API détectée. Modèle: {model} | Base URL: {base_url if base_url else 'par défaut'}")
     else:
         print("Aucune clé API trouvée. Utilisation du MOCK pour générer les résultats (à des fins de test).")
-    
-    results = []
-    
+
     # Filtrer uniquement les accords qui mentionnent la mobilité (Jalon 1)
-    mask = df['mentionne_mobilite'] == True
-    to_process = df[mask]
-    
-    print(f"Lancement de l'analyse par IA sur {len(to_process)} accords...")
-    
+    mask = df['mentionne_mobilite'].astype(bool)
+    to_process = df[mask].copy()
+
+    # -----------------------------------------------------------------------
+    # DÉDUPLICATION PAR CHUNK
+    # Un même accord peut avoir plusieurs mots-clés pointant vers le même
+    # extrait_chunk. On ne veut appeler l'IA qu'une seule fois par chunk
+    # unique (ID, extrait_chunk). Les résultats sont ensuite rediffusés à
+    # toutes les lignes partageant ce chunk.
+    # -----------------------------------------------------------------------
+    chunk_col = 'extrait_chunk' if 'extrait_chunk' in to_process.columns else 'contexte_etendu'
+
+    # Clé de déduplication : (ID, contenu du chunk)
+    to_process['_chunk_key'] = (
+        to_process['ID'].astype(str) + '|||' + to_process[chunk_col].fillna('').astype(str)
+    )
+
+    # Garder une seule ligne représentative par chunk unique
+    unique_chunks = to_process.drop_duplicates(subset='_chunk_key')
+
+    total_rows = len(to_process)
+    total_unique = len(unique_chunks)
+    saved = total_rows - total_unique
+    print(
+        f"Lancement de l'analyse par IA sur {total_unique} chunks uniques "
+        f"({total_rows} lignes au total, {saved} appels économisés par déduplication)."
+    )
+
     # Attempt to import tqdm for a nice progress bar
     try:
         from tqdm import tqdm
-        iterator = tqdm(to_process.iterrows(), total=len(to_process), desc="Traitement LLM")
+        iterator = tqdm(unique_chunks.iterrows(), total=total_unique, desc="Traitement LLM")
     except ImportError:
-        iterator = to_process.iterrows()
-        
+        iterator = unique_chunks.iterrows()
+
     count = 0
-    total = len(to_process)
-    
+    # Cache : chunk_key -> résultat normalisé
+    chunk_cache: dict = {}
+
     for idx, row in iterator:
         count += 1
         doc_id = row['ID']
-        # Compatibilité : le nouveau pipeline utilise 'extrait_chunk', l'ancien 'contexte_etendu'
-        context = row.get('extrait_chunk') or row.get('contexte_etendu')
-        
-        if type(iterator) is not type and not hasattr(iterator, 'set_description'):
-            # Si pas de tqdm, on affiche des logs textuels tous les 10 accords
-            if count % 10 == 0:
-                print(f"Progression : {count} / {total} accords traités...")
-            
+        context = row.get(chunk_col)
+        chunk_key = row['_chunk_key']
+
+        if not hasattr(iterator, 'set_description') and count % 10 == 0:
+            print(f"Progression : {count} / {total_unique} chunks traités...")
+
         if pd.isna(context) or not str(context).strip():
-            results.append({
+            chunk_cache[chunk_key] = _normalize_result({
                 "ID": doc_id,
                 "mesures_proposees": [],
                 "mot_cle": None,
+                "mentionne_mobilite_ia": None,
                 "est_mobilites_durables": None,
                 "moyens_materiels": [],
                 "moyens_financiers": []
             })
             continue
-            
+
         if client:
             res = analyze_context_llm(client, model, doc_id, context, categories)
         else:
             res = analyze_context_mock(doc_id, context, categories)
-            
-        # Normalisation des données pour insertion dans le dataframe (Conversion des listes en str)
-        if isinstance(res.get("mesures_proposees"), list):
-            res["resume_mesure_proposee"] = " | ".join([str(m) for m in res["mesures_proposees"]])
-        else:
-            res["resume_mesure_proposee"] = str(res.get("mesures_proposees", ""))
-            
-        if isinstance(res.get("moyens_materiels"), list):
-            res["moyens_materiels"] = " | ".join([str(m) for m in res["moyens_materiels"]])
-        else:
-            res["moyens_materiels"] = str(res.get("moyens_materiels", ""))
-            
-        if isinstance(res.get("moyens_financiers"), list):
-            res["moyens_financiers"] = " | ".join([str(m) for m in res["moyens_financiers"]])
-        else:
-            res["moyens_financiers"] = str(res.get("moyens_financiers", ""))
-            
-        res["mot_cle_calcule"] = str(res.get("mot_cle", ""))
-        res["est_mobilites_durables"] = str(res.get("est_mobilites_durables", ""))
-        res["mentionne_mobilite_ia"] = str(res.get("mentionne_mobilite_ia", ""))
 
-        results.append(res)
+        chunk_cache[chunk_key] = _normalize_result(res)
 
-    # Créer le dataframe de résultats et fusionner avec le df principal
-    res_df = pd.DataFrame(results, index=to_process.index)
-
+    # Rediffuser les résultats à toutes les lignes (y compris les doublons de chunk)
     target_columns = [
         "resume_mesure_proposee", "mot_cle_calcule",
         "mentionne_mobilite_ia", "est_mobilites_durables",
@@ -227,8 +249,11 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str):
     for col in target_columns:
         if col not in df.columns:
             df[col] = None
-        if col in res_df.columns:
-            df.loc[mask, col] = res_df[col]
+
+    for col in target_columns:
+        df.loc[mask, col] = to_process['_chunk_key'].map(
+            lambda k: chunk_cache.get(k, {}).get(col)
+        ).values
 
     # Construire l'URL Légifrance depuis l'ID
     # Le bon chemin est /acco/id/ (et non /conv_coll/id/)
