@@ -3,7 +3,6 @@ import json
 import re
 import time
 import pandas as pd
-from pathlib import Path
 from openai import OpenAI
 
 def analyze_context_mock(doc_id: str, context: str, categories: list) -> dict:
