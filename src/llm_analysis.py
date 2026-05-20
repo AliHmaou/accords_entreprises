@@ -13,7 +13,8 @@ def analyze_context_mock(doc_id: str, context: str, categories: list) -> dict:
         "mentionne_mobilite_ia": "Oui",
         "est_mobilites_durables": "Oui",
         "moyens_materiels": ["parc à vélos"],
-        "moyens_financiers": ["indemnité kilométrique"]
+        "moyens_financiers": ["indemnité kilométrique"],
+        "mesures_ref_idfm": "Promouvoir le vélo"
     }
 
 def extract_json_from_text(text: str) -> dict:
@@ -47,12 +48,16 @@ def extract_json_from_text(text: str) -> dict:
         
     raise json.JSONDecodeError("Impossible de trouver un bloc JSON valide", text, 0)
 
-def analyze_context_llm(client: OpenAI, model: str, doc_id: str, context: str, categories: list, max_retries: int = 3) -> dict:
+def analyze_context_llm(client: OpenAI, model: str, doc_id: str, context: str, categories: list, idfm_measures: list = None, max_retries: int = 3, verbose: bool = False, temperature: float = 0.0) -> dict:
     categories_str = ", ".join(categories)
+    idfm_measures_str = ", ".join(idfm_measures) if idfm_measures else "Pas de référentiel disponible"
     
     prompt = f"""
 Au service d'une autorité organisatrice des mobilités, et en tant que chargé de développement des mobilités durables en entreprises.
-Les données sont des extraits des accords issus des négociations annuelles obligatoires portant sur la thématique des mobilités, extraction faite sur la base des mots clés soumis.
+Les données fournies sont des extraits d'accords professionnels. 
+
+STRUCTURE DE L'EXTRAIT :
+L'extrait commence par une balise "TITRE SECTION :" qui indique la partie du document d'où provient le texte. Utilise cette information pour mieux comprendre le contexte de l'accord.
 
 Voici l'extrait pour l'accord {doc_id} :
 {context}
@@ -65,7 +70,8 @@ Répond EXCLUSIVEMENT en JSON valide selon cette structure :
   "mentionne_mobilite_ia": "Oui ou Non",
   "est_mobilites_durables": "Oui ou Non",
   "moyens_materiels": ["moyen 1", "moyen 2"],
-  "moyens_financiers": ["moyen financier 1", "moyen financier 2"]
+  "moyens_financiers": ["moyen financier 1", "moyen financier 2"],
+  "mesures_ref_idfm": "Libellé exact du référentiel IDFM"
 }}
 
 Instructions pour les champs :
@@ -84,6 +90,9 @@ Instructions pour les champs :
   par l'entreprise, sous la forme d'une liste.
 * "moyens_financiers": Moyens financiers concernant les mobilités proposés par l'entreprise sous
   la forme d'une liste.
+* "mesures_ref_idfm": Tu DOIS choisir la mesure la plus pertinente UNIQUEMENT parmi la liste suivante (respecte scrupuleusement le libellé exact) :
+{idfm_measures_str}
+Si aucune mesure ne correspond vraiment, répond exactement "hors mesures IDFM".
 """
 
     fallback_result = {
@@ -93,21 +102,28 @@ Instructions pour les champs :
         "mentionne_mobilite_ia": None,
         "est_mobilites_durables": None,
         "moyens_materiels": [],
-        "moyens_financiers": []
+        "moyens_financiers": [],
+        "mesures_ref_idfm": "hors mesures IDFM"
     }
 
     for attempt in range(max_retries):
         try:
+            if verbose:
+                print(f"\n--- PROMPT POUR {doc_id} ---\n{prompt}\n--- FIN PROMPT ---")
+
             response = client.chat.completions.create(
                 model=model,
                 messages=[
                     {"role": "system", "content": "Tu es un expert métier analysant des accords professionnels. Tu réponds uniquement en JSON valide sans aucun texte autour ni markdown."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.0
+                temperature=temperature
             )
             content = response.choices[0].message.content
             
+            if verbose:
+                print(f"\n--- RÉPONSE POUR {doc_id} ---\n{content}\n--- FIN RÉPONSE ---")
+
             if not content:
                 raise ValueError("Contenu vide retourné par l'API.")
                 
@@ -145,20 +161,38 @@ def _normalize_result(res: dict) -> dict:
     res["mot_cle_calcule"] = str(res.get("mot_cle", ""))
     res["est_mobilites_durables"] = str(res.get("est_mobilites_durables", ""))
     res["mentionne_mobilite_ia"] = str(res.get("mentionne_mobilite_ia", ""))
+    res["mesures_ref_idfm"] = str(res.get("mesures_ref_idfm", "hors mesures IDFM"))
     return res
 
 
-def process_llm(input_parquet: str, output_parquet: str, categories_csv: str):
+def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, idfm_referentiel_csv: str = None, verbose: bool = False):
     df = pd.read_parquet(input_parquet)
 
     # Lecture des catégories
     cat_df = pd.read_csv(categories_csv)
     categories = cat_df.iloc[:, 0].dropna().unique().tolist()
 
-    # Paramétrage de l'API (Azure, Groq, OpenAI...)
-    api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("GROQ_API_KEY")
-    base_url = os.getenv("LLM_BASE_URL")
-    model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    # Lecture du référentiel IDFM
+    idfm_measures = []
+    if idfm_referentiel_csv and os.path.exists(idfm_referentiel_csv):
+        idfm_df = pd.read_csv(idfm_referentiel_csv)
+        idfm_measures = idfm_df.iloc[:, 0].dropna().unique().tolist()
+        print(f"Référentiel IDFM chargé : {len(idfm_measures)} mesures trouvées.")
+
+    # Paramétrage de l'API (Priorité Azure AI Foundry, puis générique OpenAI/Groq)
+    az_key = os.getenv("AZURE_AI_API_KEY")
+    az_endpoint = os.getenv("AZURE_AI_ENDPOINT")
+    az_model = os.getenv("AZURE_AI_MODEL")
+
+    api_key = az_key or os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("GROQ_API_KEY")
+    base_url = az_endpoint or os.getenv("LLM_BASE_URL")
+    model = az_model or os.getenv("LLM_MODEL", "gpt-4o-mini")
+    
+    # Récupération de la température
+    try:
+        temperature = float(os.getenv("LLM_TEMPERATURE", "0.0"))
+    except ValueError:
+        temperature = 0.0
 
     client = None
     if api_key:
@@ -166,9 +200,14 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str):
         if base_url:
             client_kwargs["base_url"] = base_url
         client = OpenAI(**client_kwargs)
-        print(f"Clé API détectée. Modèle: {model} | Base URL: {base_url if base_url else 'par défaut'}")
+        
+        provider = "Azure AI Foundry" if az_key else "OpenAI/Groq/Custom"
+        print(f"Initialisation client LLM ({provider}).")
+        print(f"  Modèle     : {model}")
+        print(f"  Endpoint    : {base_url if base_url else 'par défaut'}")
+        print(f"  Température : {temperature}")
     else:
-        print("Aucune clé API trouvée. Utilisation du MOCK pour générer les résultats (à des fins de test).")
+        print("Aucune clé API trouvée. Utilisation du MOCK pour générer les résultats.")
 
     # Filtrer uniquement les accords qui mentionnent la mobilité (Jalon 1)
     mask = df['mentionne_mobilite'].astype(bool)
@@ -232,7 +271,7 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str):
             continue
 
         if client:
-            res = analyze_context_llm(client, model, doc_id, context, categories)
+            res = analyze_context_llm(client, model, doc_id, context, categories, idfm_measures=idfm_measures, verbose=verbose, temperature=temperature)
         else:
             res = analyze_context_mock(doc_id, context, categories)
 
@@ -242,7 +281,7 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str):
     target_columns = [
         "resume_mesure_proposee", "mot_cle_calcule",
         "mentionne_mobilite_ia", "est_mobilites_durables",
-        "moyens_materiels", "moyens_financiers"
+        "moyens_materiels", "moyens_financiers", "mesures_ref_idfm"
     ]
 
     for col in target_columns:
@@ -253,6 +292,9 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str):
         df.loc[mask, col] = to_process['_chunk_key'].map(
             lambda k: chunk_cache.get(k, {}).get(col)
         ).values
+
+    # Ajout du champ LLM_MODEL_USED
+    df['llm_model_used'] = model if client else "MOCK"
 
     # Construire l'URL Légifrance depuis l'ID
     # Le bon chemin est /acco/id/ (et non /conv_coll/id/)
@@ -292,5 +334,6 @@ if __name__ == "__main__":
     input_path = "ACCORDS_PROFESSIONNELS/data/outputs/interim/metadata_with_context.parquet"
     output_path = "ACCORDS_PROFESSIONNELS/data/outputs/202511_ACCO_MESURES_MOBILITES_FINAL.parquet"
     kw_csv = "ACCORDS_PROFESSIONNELS/data/inputs/referentiels/20260318_categories_mots_cles.csv"
+    idfm_csv = "ACCORDS_PROFESSIONNELS/data/inputs/referentiels/20260507_ref_mesures_idfm.csv"
     
-    process_llm(input_path, output_path, kw_csv)
+    process_llm(input_path, output_path, kw_csv, idfm_referentiel_csv=idfm_csv)

@@ -1,4 +1,4 @@
-# Pipeline d'Analyse des Accords d'Entreprises (Mobilités) - Maj Mai 2026
+# Pipeline d'Analyse des Accords d'Entreprises (Mobilités)
 
 Bienvenue sur le dépôt du projet **Accords Entreprises**. Ce projet propose un pipeline complet de bout-en-bout permettant de traiter, d'analyser sémantiquement, de géolocaliser, et de visualiser des accords professionnels d'entreprises.
 

@@ -38,13 +38,27 @@ def extract_chunks_per_keyword(
     - theme_recherche : le mot-clé trouvé
     - categorie_mot_cle : la catégorie associée
     - extrait_chunk : le contexte autour du paragraphe contenant le mot-clé
+    Inclut désormais le TITRE DE LA PARTIE si trouvé.
     """
     paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+
+    # Identification des titres pour chaque paragraphe
+    para_to_heading = {}
+    last_heading = "Introduction / Titre non détecté"
+    for i, p in enumerate(paragraphs):
+        # On considère comme titre tout paragraphe commençant par # (Markdown)
+        if p.startswith('#'):
+            last_heading = p.lstrip('#').strip()
+        para_to_heading[i] = last_heading
 
     # Regrouper les paragraphes par mot-clé trouvé
     kw_to_para_indices: dict[str, set] = {}
 
     for i, p in enumerate(paragraphs):
+        # On ne cherche pas de mots-clés dans les titres eux-mêmes pour éviter les doublons de contexte
+        if p.startswith('#'):
+            continue
+
         matches = regex.findall(p)
         for m in matches:
             kw = m.lower()
@@ -54,11 +68,18 @@ def extract_chunks_per_keyword(
                 max(0, i - context_window),
                 min(len(paragraphs), i + context_window + 1)
             ):
-                kw_to_para_indices[kw].add(j)
+                # On n'ajoute pas les titres dans le flux de texte du chunk pour garder la lisibilité,
+                # on les gère séparément.
+                if not paragraphs[j].startswith('#'):
+                    kw_to_para_indices[kw].add(j)
 
     results = []
     for kw, indices in kw_to_para_indices.items():
         sorted_indices = sorted(indices)
+        
+        # Trouver le titre associé au premier paragraphe du groupe
+        heading = para_to_heading.get(sorted_indices[0], "Titre non trouvé")
+        
         chunks = []
         last_idx = -2
         for idx in sorted_indices:
@@ -67,10 +88,12 @@ def extract_chunks_per_keyword(
             chunks.append(paragraphs[idx])
             last_idx = idx
 
+        full_chunk_text = f"TITRE SECTION : {heading}\n\n" + "\n\n".join(chunks)
+
         results.append({
             'theme_recherche': kw,
             'categorie_mot_cle': mapping.get(kw, ''),
-            'extrait_chunk': "\n\n".join(chunks),
+            'extrait_chunk': full_chunk_text,
         })
 
     return results

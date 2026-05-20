@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 import subprocess
 import pandas as pd
 from pathlib import Path
@@ -70,6 +71,11 @@ def choose_source_parquet(base_dir: Path, label: str) -> Path | None:
 
 
 def run():
+    parser = argparse.ArgumentParser(description="Pipeline des Accords Professionnels")
+    parser.add_argument("--verbose", action="store_true", help="Affiche les prompts et réponses LLM")
+    args, unknown = parser.parse_known_args()
+    verbose = args.verbose
+
     # Load .env file
     load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -79,6 +85,7 @@ def run():
     archives_dir = base_dir / "data/inputs/archives_acco"
     extract_dir = base_dir / "tmp"
     kw_csv = base_dir / "data/inputs/referentiels/20260318_categories_mots_cles.csv"
+    idfm_csv = base_dir / "data/inputs/referentiels/20260507_ref_mesures_idfm.csv"
 
     # --- Mode de démarrage ---
     print("\nMODE DE DÉMARRAGE :")
@@ -232,6 +239,7 @@ def run():
                 )
                 continue
             df_meta = metadata_parser.parse_all_metadata(str(xml_dir))
+            df_meta['source_archive'] = archive_path.name
             interim_dir.mkdir(parents=True, exist_ok=True)
             df_meta.to_parquet(str(metadata_initial))
             print(f"Métadonnées sauvegardées dans {metadata_initial}")
@@ -290,13 +298,23 @@ def run():
 
                 temp_context = metadata_with_context.with_suffix('.temp.parquet')
                 df_temp.to_parquet(temp_context)
-                llm_analysis.process_llm(str(temp_context), str(final_output), str(kw_csv))
+                llm_analysis.process_llm(
+                    str(temp_context), 
+                    str(final_output), 
+                    str(kw_csv), 
+                    idfm_referentiel_csv=str(idfm_csv),
+                    verbose=verbose
+                )
                 if temp_context.exists():
                     temp_context.unlink()
             else:
                 print("Colonne DATE_TEXTE introuvable, traitement sans filtre temporel.")
                 llm_analysis.process_llm(
-                    str(metadata_with_context), str(final_output), str(kw_csv)
+                    str(metadata_with_context), 
+                    str(final_output), 
+                    str(kw_csv), 
+                    idfm_referentiel_csv=str(idfm_csv),
+                    verbose=verbose
                 )
 
         # 6. Enrichissement SIRENE et référentiel géographique
