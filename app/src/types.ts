@@ -37,6 +37,9 @@ export interface Agreement {
   fichier_markdown?: string;
   source_archive?: string;        // nom de l'archive source
 
+  // Enrichissement unités légales
+  categorie_entreprise?: string;
+
   // Localization fields (produced by geoloc_epci.py)
   localisation_lat?: number;
   localisation_lon?: number;

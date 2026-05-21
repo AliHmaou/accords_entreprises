@@ -166,6 +166,11 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
                              Code APE: {agreement.CODE_APE}
                         </span>
+                        {agreement.categorie_entreprise && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200 uppercase tracking-wider">
+                                Catégorie : {agreement.categorie_entreprise}
+                            </span>
+                        )}
                          {(agreement.localisation_region_nom || agreement.localisation_region) && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                 📍 {agreement.localisation_region_nom || agreement.localisation_region}

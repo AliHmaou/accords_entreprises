@@ -104,8 +104,8 @@ const DataTable: React.FC<DataTableProps> = ({
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/6">
                                 Secteur
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/5">
-                                Raison Sociale
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/4">
+                                Entreprise & Localisation
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/2">
                                 Mesure détectée
@@ -132,12 +132,19 @@ const DataTable: React.FC<DataTableProps> = ({
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 max-w-[150px] truncate" title={agreement.SECTEUR}>
                                     {agreement.SECTEUR}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[200px]" title={agreement.RAISON_SOCIALE}>
-                                       <HighlightedText text={agreement.RAISON_SOCIALE} highlight={highlightTerm} />
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[180px]" title={agreement.RAISON_SOCIALE}>
+                                           <HighlightedText text={agreement.RAISON_SOCIALE} highlight={highlightTerm} />
+                                        </div>
+                                        {agreement.categorie_entreprise && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-semibold uppercase tracking-wider" title="Catégorie d'entreprise">
+                                                {agreement.categorie_entreprise}
+                                            </span>
+                                        )}
                                     </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-500 flex items-center gap-2">
-                                        <span>{agreement.SIRET}</span>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mb-1">
+                                        <span className="font-mono">{agreement.SIRET}</span>
                                         <button 
                                             onClick={(e) => openGoogleMaps(e, agreement)} 
                                             className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors"
@@ -145,6 +152,18 @@ const DataTable: React.FC<DataTableProps> = ({
                                         >
                                             <LocationIcon />
                                         </button>
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap gap-1">
+                                        {agreement.localisation_departement_code && (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700" title="Département">
+                                                {agreement.localisation_departement_nom ? `${agreement.localisation_departement_nom} (${agreement.localisation_departement_code})` : agreement.localisation_departement_code}
+                                            </span>
+                                        )}
+                                        {agreement.localisation_epci_nom && (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" title="EPCI">
+                                                {agreement.localisation_epci_nom}
+                                            </span>
+                                        )}
                                     </div>
                                 </td>
                                 <td className="px-6 py-4">

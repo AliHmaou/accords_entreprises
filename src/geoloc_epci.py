@@ -84,6 +84,7 @@ def enrich_accords_with_geoloc(
     accords_parquet: str,
     geo_ref_parquet: str,
     ept_parquet: str,
+    unites_legales_parquet: str,
     output_parquet: str
 ):
     sirene_url = (
@@ -91,10 +92,11 @@ def enrich_accords_with_geoloc(
         "GeolocalisationEtablissement_Sirene_pour_etudes_statistiques_utf8.parquet"
     )
 
-    print("Enrichissement des accords avec les données SIRENE + référentiel géo via DuckDB...")
+    print("Enrichissement des accords avec les données SIRENE + référentiel géo + Unités Légales via DuckDB...")
 
     con = duckdb.connect(database=':memory:')
 
+    # Pour joindre avec StockUniteLegale (qui utilise le SIREN), on prend les 9 premiers caractères du SIRET
     query = f"""
     SELECT
         a.*,
@@ -108,7 +110,8 @@ def enrich_accords_with_geoloc(
         g.localisation_epci_id,
         g.localisation_epci_nom,
         t.EPT AS localisation_ept_id,
-        t.LIBEPT AS localisation_ept_nom
+        t.LIBEPT AS localisation_ept_nom,
+        u.categorieEntreprise AS categorie_entreprise
     FROM read_parquet('{accords_parquet}') a
     LEFT JOIN read_parquet('{sirene_url}') s
         ON a.SIRET = s.siret
@@ -116,6 +119,8 @@ def enrich_accords_with_geoloc(
         ON s.plg_code_commune = g.plg_code_commune
     LEFT JOIN read_parquet('{ept_parquet}') t
         ON s.plg_code_commune = t.plg_code_commune
+    LEFT JOIN read_parquet('{unites_legales_parquet}') u
+        ON substr(a.SIRET, 1, 9) = u.siren
     """
 
     df_enriched = con.execute(query).df()
@@ -131,6 +136,7 @@ def process_geoloc(accords_in: str, accords_out: str):
     tmp_dir.mkdir(parents=True, exist_ok=True)
 
     ref_csv = base_dir / "data/inputs/referentiels/fr-esr-referentiel-geographique.csv"
+    unites_legales_parquet = base_dir / "data/inputs/referentiels/StockUniteLegale_utf8.parquet"
     ept_url = "https://www.insee.fr/fr/statistiques/fichier/2510634/ept_au_01-01-2026.zip"
 
     ept_zip = tmp_dir / "ept.zip"
@@ -145,6 +151,7 @@ def process_geoloc(accords_in: str, accords_out: str):
         accords_in,
         str(geo_ref_parquet),
         str(ept_parquet),
+        str(unites_legales_parquet),
         accords_out
     )
 
