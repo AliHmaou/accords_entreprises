@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Agreement } from '../types';
 import DetailsModal from './DetailsModal';
@@ -36,7 +35,6 @@ const Dashboard: React.FC = () => {
     // Search States
     const [globalSearch, setGlobalSearch] = useState('');
     const [measureSearch, setMeasureSearch] = useState('');
-    const [onlyMobility, setOnlyMobility] = useState(false);
     const [onlyMobiliteIA, setOnlyMobiliteIA] = useState(false);
     const [onlyIDF, setOnlyIDF] = useState(false); 
     
@@ -131,10 +129,11 @@ const Dashboard: React.FC = () => {
                 )`;
             }
 
-            // Measure Label Search (cherche dans mesure_extraite, resume_mesure_proposee et theme_recherche)
+            // Measure Label Search (cherche dans mesures_ref_idfm, mesure_extraite, resume_mesure_proposee et theme_recherche)
             if (measureSearch) {
                 const term = measureSearch.replace(/'/g, "''").toLowerCase();
                 query += ` AND (
+                    lower(COALESCE(mesures_ref_idfm, '')) LIKE '%${term}%' OR
                     lower(COALESCE(mesure_extraite, '')) LIKE '%${term}%' OR
                     lower(COALESCE(resume_mesure_proposee, '')) LIKE '%${term}%' OR
                     lower(COALESCE(theme_recherche, '')) LIKE '%${term}%'
@@ -168,12 +167,6 @@ const Dashboard: React.FC = () => {
                 query += ` AND lower(CAST(mentionne_mobilite_ia AS VARCHAR)) IN ('oui', 'true', '1')`;
             }
 
-            // Mobility Only Toggle
-            if (onlyMobility) {
-                // Using CAST to VARCHAR and LOWER to handle diverse formats (true, 1, oui, True, TRUE)
-                query += ` AND lower(CAST(est_mobilites_durables AS VARCHAR)) IN ('true', '1', 'oui')`;
-            }
-
             // Île-de-France Toggle
             if (onlyIDF) {
                 query += ` AND localisation_region_nom = 'Île-de-France'`;
@@ -202,7 +195,7 @@ const Dashboard: React.FC = () => {
             isCancelled = true;
             clearTimeout(timer);
         };
-    }, [globalSearch, measureSearch, selectedSectors, selectedLocations, onlyMobility, onlyMobiliteIA, onlyIDF, dbReady]);
+    }, [globalSearch, measureSearch, selectedSectors, selectedLocations, onlyMobiliteIA, onlyIDF, dbReady]);
 
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -306,9 +299,9 @@ const Dashboard: React.FC = () => {
         if (!filteredAgreements || filteredAgreements.length === 0) return [];
         const counts: Record<string, number> = {};
         filteredAgreements.forEach(a => {
-            // Priorité : theme_recherche (mot-clé NLP), sinon mesure_extraite
-            const label = a.theme_recherche || a.mesure_extraite || a.resume_mesure_proposee;
-            if (label) {
+            // Priorité : mesures_ref_idfm, sinon theme_recherche (mot-clé NLP), sinon mesure_extraite
+            const label = a.mesures_ref_idfm || a.theme_recherche || a.mesure_extraite || a.resume_mesure_proposee;
+            if (label && label !== 'AUCUNE_CORRESPONDANCE' && label !== 'hors mesures IDFM') {
                 const key = label.trim();
                 counts[key] = (counts[key] || 0) + 1;
             }
@@ -403,7 +396,7 @@ const Dashboard: React.FC = () => {
                     {/* Measure Search */}
                     <div className="md:col-span-3">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Recherche Libellé Mesure
+                            Mesure détectée
                         </label>
                         <input
                             type="text"
@@ -532,29 +525,14 @@ const Dashboard: React.FC = () => {
                             aria-checked={onlyMobiliteIA}
                             onClick={() => setOnlyMobiliteIA(!onlyMobiliteIA)}
                         >
-                            <span className="sr-only">Mobilité confirmée par IA uniquement</span>
+                            <span className="sr-only">Mentionne les mobilités ?</span>
                             <span aria-hidden="true" className={`${onlyMobiliteIA ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
                         </button>
-                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur mentionne_mobilite_ia : l'IA a confirmé que l'extrait traite bien de mobilité (évite les faux positifs lexicaux)">
-                            🤖 Mobilité confirmée IA
+                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur mentionne_mobilite_ia : l'IA a confirmé que l'extrait traite réellement de mobilité (évite les faux positifs lexicaux)">
+                            Mentionne les mobilités ?
                         </span>
                     </div>
-                    {/* Mobility Only */}
-                    <div className="flex items-center">
-                        <button 
-                            type="button" 
-                            className={`${onlyMobility ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
-                            role="switch"
-                            aria-checked={onlyMobility}
-                            onClick={() => setOnlyMobility(!onlyMobility)}
-                        >
-                            <span className="sr-only">Mobilités Durables uniquement</span>
-                            <span aria-hidden="true" className={`${onlyMobility ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
-                        </button>
-                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">
-                            Mobilités Durables
-                        </span>
-                    </div>
+
                     {/* IDF Only */}
                     <div className="flex items-center">
                         <button 

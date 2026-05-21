@@ -32,7 +32,10 @@ export interface Agreement {
   est_mobilites_durables?: string;
   moyens_materiels?: string;
   moyens_financiers?: string;
+  mesures_ref_idfm?: string;      // mesure issue du référentiel IDFM
+  llm_model_used?: string;        // modèle LLM utilisé pour l'analyse
   fichier_markdown?: string;
+  source_archive?: string;        // nom de l'archive source
 
   // Localization fields (produced by geoloc_epci.py)
   localisation_lat?: number;

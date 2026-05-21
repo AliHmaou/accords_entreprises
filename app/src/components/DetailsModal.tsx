@@ -216,11 +216,19 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                         </div>
                     </div>
 
-                    <div>
-                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">⚡ Mesure extraite (IA)</h3>
-                        <blockquote className="text-gray-700 dark:text-gray-300 bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-md border-l-4 border-indigo-500 italic">
-                            "<HighlightedText text={agreement.mesure_extraite || agreement.resume_mesure_proposee || '(non disponible)'} highlight={highlightTerm} />"
-                        </blockquote>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📌 Mesure IDFM</h3>
+                            <blockquote className="text-gray-700 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/30 p-4 rounded-md border-l-4 border-blue-500 font-medium">
+                                <HighlightedText text={agreement.mesures_ref_idfm || 'Non catégorisé'} highlight={highlightTerm} />
+                            </blockquote>
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">⚡ Mesure détaillée (IA)</h3>
+                            <blockquote className="text-gray-700 dark:text-gray-300 bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-md border-l-4 border-indigo-500 italic">
+                                "<HighlightedText text={agreement.mesure_extraite || agreement.resume_mesure_proposee || '(non disponible)'} highlight={highlightTerm} />"
+                            </blockquote>
+                        </div>
                     </div>
                     
                      <div>

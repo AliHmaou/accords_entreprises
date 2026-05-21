@@ -105,11 +105,8 @@ const DataTable: React.FC<DataTableProps> = ({
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/5">
                                 Raison Sociale
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/6">
-                                Mot-clé / Catégorie
-                            </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/3">
-                                Mesure extraite
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/2">
+                                Mesure détectée
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 Date dépôt
@@ -148,19 +145,9 @@ const DataTable: React.FC<DataTableProps> = ({
                                         </button>
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-[140px]" title={agreement.theme_recherche}>
-                                        🔍 {agreement.theme_recherche}
-                                    </div>
-                                    {agreement.categorie_mot_cle && (
-                                        <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
-                                            {agreement.categorie_mot_cle}
-                                        </span>
-                                    )}
-                                </td>
                                 <td className="px-6 py-4">
-                                     <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2" title={agreement.mesure_extraite || agreement.resume_mesure_proposee}>
-                                        <HighlightedText text={agreement.mesure_extraite || agreement.resume_mesure_proposee || ''} highlight={highlightTerm} />
+                                     <p className="text-sm font-medium text-gray-900 dark:text-white" title={agreement.mesures_ref_idfm}>
+                                        <HighlightedText text={agreement.mesures_ref_idfm || 'Non catégorisé'} highlight={highlightTerm} />
                                      </p>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(agreement.DATE_DEPOT)}</td>
