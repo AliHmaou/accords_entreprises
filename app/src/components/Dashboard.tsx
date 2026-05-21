@@ -318,103 +318,116 @@ const Dashboard: React.FC = () => {
 
     // --- Stats Calculations ---
     
-    // Filtre des accords ayant au moins une mesure liée à la mobilité
-    const mobilityAgreements = useMemo(() => {
-        return filteredAgreements.filter(a => {
-            const mobilityVal = String(a.est_mobilites_durables || a.est_mobilites_durables_v2 || '').toLowerCase();
-            return ['true', '1', 'oui'].includes(mobilityVal);
+    // Fonction d'aide pour déduire si un accord mentionne la mobilité (OUI/NON)
+    const checkMobility = (a: Agreement) => {
+        const iaVal = String(a.mentionne_mobilite_ia || '').toLowerCase();
+        return ['oui', 'true', '1'].includes(iaVal);
+    };
+
+    // 1. Donut : Proportion Globale (Mobilité vs Non Mobilité)
+    const globalMobilityData = useMemo(() => {
+        if (!filteredAgreements || filteredAgreements.length === 0) return [];
+        let oui = 0;
+        let non = 0;
+        
+        const processedIds = new Set();
+        // On effectue un double passage : d'abord on trouve tous les ID qui ont au moins un 'OUI'
+        const idsWithMobility = new Set();
+        filteredAgreements.forEach(a => {
+            if (checkMobility(a)) idsWithMobility.add(a.ID);
         });
+
+        // Ensuite on compte de manière unique
+        filteredAgreements.forEach(a => {
+            if (!processedIds.has(a.ID)) {
+                processedIds.add(a.ID);
+                if (idsWithMobility.has(a.ID)) {
+                    oui++;
+                } else {
+                    non++;
+                }
+            }
+        });
+        
+        if (oui === 0 && non === 0) return [];
+        return [
+            { name: "Mentionne la mobilité", value: oui, fill: "#10b981" },
+            { name: "Ne mentionne pas la mobilité", value: non, fill: "#9ca3af" }
+        ];
     }, [filteredAgreements]);
 
-    // 1. IDF vs France
-    const idfVsFranceData = useMemo(() => {
-        if (!mobilityAgreements || mobilityAgreements.length === 0) return [];
-        let idf = 0;
-        let autres = 0;
-        let inconnu = 0;
+    // 2. Donut : Proportion Île-de-France (Mobilité vs Non Mobilité)
+    const idfMobilityData = useMemo(() => {
+        if (!filteredAgreements || filteredAgreements.length === 0) return [];
+        let oui = 0;
+        let non = 0;
         
-        // On compte les accords uniques pour les stats globales
-        const uniqueIds = new Set();
-        mobilityAgreements.forEach(a => {
-            if (!uniqueIds.has(a.ID)) {
-                uniqueIds.add(a.ID);
-                const reg = a.localisation_region_nom || a.localisation_region;
-                if (reg === 'Île-de-France') {
-                    idf++;
-                } else if (reg) {
-                    autres++;
+        const processedIds = new Set();
+        const idsWithMobility = new Set();
+        filteredAgreements.forEach(a => {
+            if (checkMobility(a)) idsWithMobility.add(a.ID);
+        });
+
+        filteredAgreements.forEach(a => {
+            const reg = a.localisation_region_nom || a.localisation_region;
+            if (reg === 'Île-de-France' && !processedIds.has(a.ID)) {
+                processedIds.add(a.ID);
+                if (idsWithMobility.has(a.ID)) {
+                    oui++;
                 } else {
-                    inconnu++;
+                    non++;
                 }
             }
         });
         
-        const data = [
-            { name: "Île-de-France", value: idf, fill: "#4f46e5" },
-            { name: "Reste de la France", value: autres, fill: "#34d399" }
-        ];
-        if (inconnu > 0) data.push({ name: "Non localisé", value: inconnu, fill: "#9ca3af" });
-        return data;
-    }, [mobilityAgreements]);
-
-    // 2. Catégorie d'entreprise
-    const categoryData = useMemo(() => {
-        if (!mobilityAgreements || mobilityAgreements.length === 0) return [];
-        const counts: Record<string, number> = {};
-        
-        const uniqueIds = new Set();
-        mobilityAgreements.forEach(a => {
-            if (!uniqueIds.has(a.ID)) {
-                uniqueIds.add(a.ID);
-                const cat = a.categorie_entreprise || "Non classifié";
-                counts[cat] = (counts[cat] || 0) + 1;
-            }
-        });
-        
-        const colors = ['#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#10b981', '#6b7280'];
-        return Object.entries(counts)
-            .map(([name, value], i) => ({ name, value, fill: colors[i % colors.length] }))
-            .sort((a, b) => b.value - a.value);
-    }, [mobilityAgreements]);
-
-    // 3. Couronne IDF (Paris vs Petite vs Grande)
-    const idfCouronneData = useMemo(() => {
-        if (!mobilityAgreements || mobilityAgreements.length === 0) return [];
-        let paris = 0;
-        let pc = 0;
-        let gc = 0;
-        let autres = 0;
-        
-        const uniqueIds = new Set();
-        mobilityAgreements.forEach(a => {
-            if (!uniqueIds.has(a.ID)) {
-                uniqueIds.add(a.ID);
-                const reg = a.localisation_region_nom || a.localisation_region;
-                const dep = a.localisation_departement_code;
-                
-                if (reg === 'Île-de-France' && dep) {
-                    if (dep === '75') {
-                        paris++;
-                    } else if (['92', '93', '94'].includes(dep)) {
-                        pc++;
-                    } else if (['77', '78', '91', '95'].includes(dep)) {
-                        gc++;
-                    } else {
-                        autres++;
-                    }
-                }
-            }
-        });
-        
-        // On n'affiche que si on a des données IDF
-        if (paris + pc + gc + autres === 0) return [];
-        
+        if (oui === 0 && non === 0) return [];
         return [
-            { name: "Paris (75)", value: paris, fill: "#e11d48" },
-            { name: "Petite Couronne", value: pc, fill: "#f59e0b" },
-            { name: "Grande Couronne", value: gc, fill: "#10b981" }
-        ].filter(d => d.value > 0);
-    }, [mobilityAgreements]);
+            { name: "Mentionne la mobilité (IDF)", value: oui, fill: "#3b82f6" },
+            { name: "Sans mention (IDF)", value: non, fill: "#9ca3af" }
+        ];
+    }, [filteredAgreements]);
+
+    // 3. Taux de mobilité par catégorie d'entreprise (BarChart)
+    const categoryMobilityData = useMemo(() => {
+        if (!filteredAgreements || filteredAgreements.length === 0) return [];
+        
+        const idsWithMobility = new Set();
+        filteredAgreements.forEach(a => {
+            if (checkMobility(a)) idsWithMobility.add(a.ID);
+        });
+
+        // Compter les "oui" et le "total" par catégorie (uniquement sur accords uniques)
+        const stats: Record<string, { oui: number, total: number }> = {};
+        const processedIds = new Set();
+
+        filteredAgreements.forEach(a => {
+            if (!processedIds.has(a.ID)) {
+                processedIds.add(a.ID);
+                const cat = a.categorie_entreprise || "Non classifié";
+                if (!stats[cat]) stats[cat] = { oui: 0, total: 0 };
+                
+                stats[cat].total++;
+                if (idsWithMobility.has(a.ID)) {
+                    stats[cat].oui++;
+                }
+            }
+        });
+        
+        // Transformer en %
+        const results = Object.entries(stats)
+            .map(([name, data]) => {
+                const percent = Math.round((data.oui / data.total) * 100);
+                return { 
+                    name, 
+                    value: percent, // La valeur affichée est le %
+                    details: `${data.oui} sur ${data.total}` 
+                };
+            })
+            // Trier du + fort % au plus faible
+            .sort((a, b) => b.value - a.value);
+
+        return results;
+    }, [filteredAgreements]);
 
     // 4. Top 5 Mesures IDFM
     const top5IDFMData = useMemo(() => {
@@ -724,18 +737,18 @@ const Dashboard: React.FC = () => {
                 {activeTab === 'stats' && (
                     <div className="space-y-8 animate-fade-in">
                         <div className="mb-4 text-center">
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">Indicateurs clés : Accords mentionnant des mobilités durables</h2>
-                            <p className="text-sm text-gray-500">Répartition calculée sur la base des accords uniques filtrés.</p>
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">Indicateurs clés : Proportion d'accords mentionnant la mobilité</h2>
+                            <p className="text-sm text-gray-500">Calcul basé sur les accords uniques et la confirmation IA.</p>
                         </div>
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <DonutChart title="Île-de-France vs France" data={idfVsFranceData} />
-                            <DonutChart title="Catégorie d'entreprise" data={categoryData} />
-                            {idfCouronneData.length > 0 && (
-                                <DonutChart title="Détail Île-de-France (Couronnes)" data={idfCouronneData} />
-                            )}
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <DonutChart title="Toutes régions (France entière)" data={globalMobilityData} />
+                            <DonutChart title="Zoom Île-de-France" data={idfMobilityData} />
                         </div>
-                        <div className="grid grid-cols-1 gap-8">
-                             <TopMeasuresBarChart title="Top 5 des mesures IDFM" data={top5IDFMData} />
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                             <TopMeasuresBarChart title="Taux d'intégration par catégorie d'entreprise (%)" data={categoryMobilityData} />
+                             <TopMeasuresBarChart title="Top 5 des mesures IDFM détectées" data={top5IDFMData} />
                         </div>
                     </div>
                 )}
