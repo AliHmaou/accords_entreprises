@@ -98,24 +98,24 @@ const DataTable: React.FC<DataTableProps> = ({
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-100 dark:bg-gray-700">
                         <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-10">
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-8">
                                 
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/6">
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/4">
                                 Secteur
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/4">
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/3">
                                 Entreprise & Localisation
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/2">
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/3">
                                 Mesure détectée
                             </th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
                                 Date dépôt
                             </th>
                         </tr>
                     </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                         {agreements.length > 0 ? agreements.map((agreement, index) => {
                              // Robust check for mobility flag
                              const mobilityVal = String(agreement.est_mobilites_durables || agreement.est_mobilites_durables_v2 || '').toLowerCase();
@@ -125,53 +125,61 @@ const DataTable: React.FC<DataTableProps> = ({
                              const rowKey = `${agreement.ID}-${index}`;
 
                              return (
-                            <tr key={rowKey} onClick={() => onRowClick(agreement)} className="hover:bg-indigo-50 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-200">
-                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <tr key={rowKey} onClick={() => onRowClick(agreement)} className="hover:bg-indigo-50/50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors duration-150">
+                                <td className="px-4 py-3 whitespace-nowrap text-center align-middle">
                                     {isMobility && <span title="Mobilité Durable"><LeafIcon /></span>}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 max-w-[150px] truncate" title={agreement.SECTEUR}>
-                                    {agreement.SECTEUR}
+                                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                                    <div className="line-clamp-2 leading-snug">{agreement.SECTEUR}</div>
                                 </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <div className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[180px]" title={agreement.RAISON_SOCIALE}>
-                                           <HighlightedText text={agreement.RAISON_SOCIALE} highlight={highlightTerm} />
+                                <td className="px-4 py-3">
+                                    <div className="flex flex-col space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1" title={agreement.RAISON_SOCIALE}>
+                                               <HighlightedText text={agreement.RAISON_SOCIALE} highlight={highlightTerm} />
+                                            </div>
+                                            {agreement.categorie_entreprise && (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-medium tracking-wide whitespace-nowrap flex-shrink-0" title="Catégorie d'entreprise">
+                                                    {agreement.categorie_entreprise}
+                                                </span>
+                                            )}
                                         </div>
-                                        {agreement.categorie_entreprise && (
-                                            <span className="text-[10px] px-1.5 py-0.5 rounded-sm bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-semibold uppercase tracking-wider" title="Catégorie d'entreprise">
-                                                {agreement.categorie_entreprise}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 mb-1">
-                                        <span className="font-mono">{agreement.SIRET}</span>
-                                        <button 
-                                            onClick={(e) => openGoogleMaps(e, agreement)} 
-                                            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors"
-                                            title="Localiser sur Google Maps"
-                                        >
-                                            <LocationIcon />
-                                        </button>
-                                    </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap gap-1">
-                                        {agreement.localisation_departement_code && (
-                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700" title="Département">
-                                                {agreement.localisation_departement_nom ? `${agreement.localisation_departement_nom} (${agreement.localisation_departement_code})` : agreement.localisation_departement_code}
-                                            </span>
-                                        )}
-                                        {agreement.localisation_epci_nom && (
-                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" title="EPCI">
-                                                {agreement.localisation_epci_nom}
-                                            </span>
-                                        )}
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center flex-wrap gap-2">
+                                            <div className="flex items-center gap-1">
+                                                <span className="font-mono text-[11px] text-gray-400">{agreement.SIRET}</span>
+                                                <button 
+                                                    onClick={(e) => openGoogleMaps(e, agreement)} 
+                                                    className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+                                                    title="Localiser sur Google Maps"
+                                                >
+                                                    <LocationIcon />
+                                                </button>
+                                            </div>
+                                            
+                                            {agreement.localisation_departement_nom && (
+                                                <span className="inline-flex items-center bg-gray-50 dark:bg-gray-700/50 px-1.5 py-0.5 rounded text-[11px]" title="Département">
+                                                    <span className="truncate max-w-[120px]">
+                                                        {agreement.localisation_departement_nom} ({agreement.localisation_departement_code})
+                                                    </span>
+                                                </span>
+                                            )}
+                                            
+                                            {agreement.localisation_epci_nom && (
+                                                <span className="inline-flex items-center text-purple-600 dark:text-purple-400 text-[11px] truncate max-w-[150px]" title="EPCI">
+                                                    {agreement.localisation_epci_nom}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </td>
-                                <td className="px-6 py-4">
-                                     <p className="text-sm font-medium text-gray-900 dark:text-white" title={agreement.mesures_ref_idfm}>
+                                <td className="px-4 py-3">
+                                     <div className="text-sm font-medium text-gray-900 dark:text-white leading-snug line-clamp-2" title={agreement.mesures_ref_idfm}>
                                         <HighlightedText text={agreement.mesures_ref_idfm || 'Non catégorisé'} highlight={highlightTerm} />
-                                     </p>
+                                     </div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(agreement.DATE_DEPOT)}</td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">
+                                    {formatDate(agreement.DATE_DEPOT)}
+                                </td>
                             </tr>
                         )}) : (
                             <tr>
