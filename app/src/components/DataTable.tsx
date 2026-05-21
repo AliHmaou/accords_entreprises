@@ -101,16 +101,16 @@ const DataTable: React.FC<DataTableProps> = ({
                             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-8">
                                 
                             </th>
-                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/4">
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[15%]">
                                 Secteur
                             </th>
-                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/3">
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[40%]">
                                 Entreprise & Localisation
                             </th>
-                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/3">
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[35%]">
                                 Mesure détectée
                             </th>
-                            <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
+                            <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[10%]">
                                 Date dépôt
                             </th>
                         </tr>
@@ -135,7 +135,7 @@ const DataTable: React.FC<DataTableProps> = ({
                                 <td className="px-4 py-3">
                                     <div className="flex flex-col space-y-1">
                                         <div className="flex items-center gap-2">
-                                            <div className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1" title={agreement.RAISON_SOCIALE}>
+                                            <div className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug" title={agreement.RAISON_SOCIALE}>
                                                <HighlightedText text={agreement.RAISON_SOCIALE} highlight={highlightTerm} />
                                             </div>
                                             {agreement.categorie_entreprise && (
