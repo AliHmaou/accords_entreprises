@@ -26,6 +26,7 @@ interface DataTableProps {
     highlightTerm: string;
     // Pagination props
     totalItems: number;
+    totalUniqueAgreements: number;
     currentPage: number;
     itemsPerPage: number;
     onPageChange: (page: number) => void;
@@ -65,6 +66,7 @@ const DataTable: React.FC<DataTableProps> = ({
     onRowClick, 
     highlightTerm,
     totalItems,
+    totalUniqueAgreements,
     currentPage,
     itemsPerPage,
     onPageChange
@@ -88,7 +90,7 @@ const DataTable: React.FC<DataTableProps> = ({
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden flex flex-col">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    Résultats ({totalItems})
+                    Résultats ({totalItems} mesure(s) dans {totalUniqueAgreements} accord(s))
                 </h3>
             </div>
             

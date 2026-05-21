@@ -359,6 +359,12 @@ const Dashboard: React.FC = () => {
     }, [filteredAgreements]);
 
 
+    // Unique agreements count
+    const uniqueAgreementsCount = useMemo(() => {
+        const uniqueIds = new Set(filteredAgreements.map(a => a.ID));
+        return uniqueIds.size;
+    }, [filteredAgreements]);
+
     // Pagination Logic
     const paginatedAgreements = useMemo(() => {
         const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -552,8 +558,8 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex justify-between items-center">
-                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {filteredAgreements.length} résultats trouvés
+                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <span className="text-indigo-600 dark:text-indigo-400">{filteredAgreements.length}</span> mesure(s) détectée(s) dans <span className="text-indigo-600 dark:text-indigo-400">{uniqueAgreementsCount}</span> accord(s)
                      </p>
                      
                      <label className="text-sm font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer flex items-center">
@@ -643,6 +649,7 @@ const Dashboard: React.FC = () => {
                         <DataTable 
                             agreements={paginatedAgreements} 
                             totalItems={filteredAgreements.length}
+                            totalUniqueAgreements={uniqueAgreementsCount}
                             currentPage={currentPage}
                             itemsPerPage={ITEMS_PER_PAGE}
                             onPageChange={setCurrentPage}
