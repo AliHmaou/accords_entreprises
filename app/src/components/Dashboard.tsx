@@ -2,9 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Agreement } from '../types';
 import DetailsModal from './DetailsModal';
 import DataTable from './DataTable';
-import SectorChart from './charts/SectorChart';
-import MonthlyTrendChart from './charts/MonthlyTrendChart';
-import DistributionChart from './charts/DistributionChart';
+import DonutChart from './charts/DonutChart';
+import TopMeasuresBarChart from './charts/TopMeasuresBarChart';
 import MapTab from './MapTab';
 import AboutData from './AboutData';
 import AboutDashboard from './AboutDashboard';
@@ -318,68 +317,122 @@ const Dashboard: React.FC = () => {
     };
 
     // --- Stats Calculations ---
+    
+    // Filtre des accords ayant au moins une mesure liée à la mobilité
+    const mobilityAgreements = useMemo(() => {
+        return filteredAgreements.filter(a => {
+            const mobilityVal = String(a.est_mobilites_durables || a.est_mobilites_durables_v2 || '').toLowerCase();
+            return ['true', '1', 'oui'].includes(mobilityVal);
+        });
+    }, [filteredAgreements]);
 
-    const topMeasuresData = useMemo(() => {
+    // 1. IDF vs France
+    const idfVsFranceData = useMemo(() => {
+        if (!mobilityAgreements || mobilityAgreements.length === 0) return [];
+        let idf = 0;
+        let autres = 0;
+        let inconnu = 0;
+        
+        // On compte les accords uniques pour les stats globales
+        const uniqueIds = new Set();
+        mobilityAgreements.forEach(a => {
+            if (!uniqueIds.has(a.ID)) {
+                uniqueIds.add(a.ID);
+                const reg = a.localisation_region_nom || a.localisation_region;
+                if (reg === 'Île-de-France') {
+                    idf++;
+                } else if (reg) {
+                    autres++;
+                } else {
+                    inconnu++;
+                }
+            }
+        });
+        
+        const data = [
+            { name: "Île-de-France", value: idf, fill: "#4f46e5" },
+            { name: "Reste de la France", value: autres, fill: "#34d399" }
+        ];
+        if (inconnu > 0) data.push({ name: "Non localisé", value: inconnu, fill: "#9ca3af" });
+        return data;
+    }, [mobilityAgreements]);
+
+    // 2. Catégorie d'entreprise
+    const categoryData = useMemo(() => {
+        if (!mobilityAgreements || mobilityAgreements.length === 0) return [];
+        const counts: Record<string, number> = {};
+        
+        const uniqueIds = new Set();
+        mobilityAgreements.forEach(a => {
+            if (!uniqueIds.has(a.ID)) {
+                uniqueIds.add(a.ID);
+                const cat = a.categorie_entreprise || "Non classifié";
+                counts[cat] = (counts[cat] || 0) + 1;
+            }
+        });
+        
+        const colors = ['#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#10b981', '#6b7280'];
+        return Object.entries(counts)
+            .map(([name, value], i) => ({ name, value, fill: colors[i % colors.length] }))
+            .sort((a, b) => b.value - a.value);
+    }, [mobilityAgreements]);
+
+    // 3. Couronne IDF (Paris vs Petite vs Grande)
+    const idfCouronneData = useMemo(() => {
+        if (!mobilityAgreements || mobilityAgreements.length === 0) return [];
+        let paris = 0;
+        let pc = 0;
+        let gc = 0;
+        let autres = 0;
+        
+        const uniqueIds = new Set();
+        mobilityAgreements.forEach(a => {
+            if (!uniqueIds.has(a.ID)) {
+                uniqueIds.add(a.ID);
+                const reg = a.localisation_region_nom || a.localisation_region;
+                const dep = a.localisation_departement_code;
+                
+                if (reg === 'Île-de-France' && dep) {
+                    if (dep === '75') {
+                        paris++;
+                    } else if (['92', '93', '94'].includes(dep)) {
+                        pc++;
+                    } else if (['77', '78', '91', '95'].includes(dep)) {
+                        gc++;
+                    } else {
+                        autres++;
+                    }
+                }
+            }
+        });
+        
+        // On n'affiche que si on a des données IDF
+        if (paris + pc + gc + autres === 0) return [];
+        
+        return [
+            { name: "Paris (75)", value: paris, fill: "#e11d48" },
+            { name: "Petite Couronne", value: pc, fill: "#f59e0b" },
+            { name: "Grande Couronne", value: gc, fill: "#10b981" }
+        ].filter(d => d.value > 0);
+    }, [mobilityAgreements]);
+
+    // 4. Top 5 Mesures IDFM
+    const top5IDFMData = useMemo(() => {
         if (!filteredAgreements || filteredAgreements.length === 0) return [];
         const counts: Record<string, number> = {};
+        
         filteredAgreements.forEach(a => {
-            // Priorité : mesures_ref_idfm, sinon theme_recherche (mot-clé NLP), sinon mesure_extraite
-            const label = a.mesures_ref_idfm || a.theme_recherche || a.mesure_extraite || a.resume_mesure_proposee;
+            const label = a.mesures_ref_idfm;
             if (label && label !== 'AUCUNE_CORRESPONDANCE' && label !== 'hors mesures IDFM') {
                 const key = label.trim();
                 counts[key] = (counts[key] || 0) + 1;
             }
         });
-        return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 10);
-    }, [filteredAgreements]);
-
-    const monthlyTrendData = useMemo(() => {
-        if (!filteredAgreements || filteredAgreements.length === 0) return [];
-        const counts: Record<string, number> = {};
-        filteredAgreements.forEach(a => {
-            const dateStr = a.DATE_DEPOT || a.DATE_TEXTE;
-            if (dateStr && dateStr.length >= 7) {
-                const monthKey = dateStr.substring(0, 7); 
-                counts[monthKey] = (counts[monthKey] || 0) + 1;
-            }
-        });
-        return Object.entries(counts).map(([date, value]) => ({ date, value })).sort((a, b) => a.date.localeCompare(b.date));
-    }, [filteredAgreements]);
-
-    // Territorial Stats
-    const regionsData = useMemo(() => {
-        if (!filteredAgreements) return [];
-        const counts: Record<string, number> = {};
-        filteredAgreements.forEach(a => {
-            const reg = a.localisation_region_nom || a.localisation_region;
-            if (reg) {
-                counts[reg] = (counts[reg] || 0) + 1;
-            }
-        });
-        return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-    }, [filteredAgreements]);
-
-    const departmentsData = useMemo(() => {
-        if (!filteredAgreements) return [];
-        const counts: Record<string, number> = {};
-        filteredAgreements.forEach(a => {
-            const dep = a.localisation_departement_nom || a.localisation_departement_code;
-            if (dep) {
-                counts[dep] = (counts[dep] || 0) + 1;
-            }
-        });
-        return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 20);
-    }, [filteredAgreements]);
-
-    const epciData = useMemo(() => {
-        if (!filteredAgreements) return [];
-        const counts: Record<string, number> = {};
-        filteredAgreements.forEach(a => {
-            if (a.localisation_epci_nom) {
-                counts[a.localisation_epci_nom] = (counts[a.localisation_epci_nom] || 0) + 1;
-            }
-        });
-        return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 20);
+        
+        return Object.entries(counts)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5);
     }, [filteredAgreements]);
 
 
@@ -670,17 +723,20 @@ const Dashboard: React.FC = () => {
             <div className="pt-2">
                 {activeTab === 'stats' && (
                     <div className="space-y-8 animate-fade-in">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <SectorChart data={topMeasuresData} />
-                            <MonthlyTrendChart data={monthlyTrendData} />
+                        <div className="mb-4 text-center">
+                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">Indicateurs clés : Accords mentionnant des mobilités durables</h2>
+                            <p className="text-sm text-gray-500">Répartition calculée sur la base des accords uniques filtrés.</p>
                         </div>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                             <DistributionChart title="Répartition par Région" data={regionsData} />
-                             <DistributionChart title="Top 20 Départements" data={departmentsData} />
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <DonutChart title="Île-de-France vs France" data={idfVsFranceData} />
+                            <DonutChart title="Catégorie d'entreprise" data={categoryData} />
+                            {idfCouronneData.length > 0 && (
+                                <DonutChart title="Détail Île-de-France (Couronnes)" data={idfCouronneData} />
+                            )}
                         </div>
-                         <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
-                             <DistributionChart title="Top 20 EPCI" data={epciData} />
-                         </div>
+                        <div className="grid grid-cols-1 gap-8">
+                             <TopMeasuresBarChart title="Top 5 des mesures IDFM" data={top5IDFMData} />
+                        </div>
                     </div>
                 )}
 
