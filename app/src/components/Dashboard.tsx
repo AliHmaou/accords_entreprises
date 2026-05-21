@@ -35,6 +35,7 @@ const Dashboard: React.FC = () => {
     // Search States
     const [globalSearch, setGlobalSearch] = useState('');
     const [measureSearch, setMeasureSearch] = useState('');
+    const [showMeasureSuggestions, setShowMeasureSuggestions] = useState(false);
     const [onlyMobiliteIA, setOnlyMobiliteIA] = useState(false);
     const [onlyIDF, setOnlyIDF] = useState(false); 
     
@@ -59,6 +60,26 @@ const Dashboard: React.FC = () => {
 
     const sectorWrapperRef = useRef<HTMLDivElement>(null);
     const geoWrapperRef = useRef<HTMLDivElement>(null);
+    const measureWrapperRef = useRef<HTMLDivElement>(null);
+
+    const IDFM_MEASURES = [
+        "Utiliser les transports en commun",
+        "Organiser le télétravail et les horaires de travail",
+        "Promouvoir le vélo",
+        "Encourager la marche",
+        "Inclure les EDP",
+        "Promouvoir l’autopartage",
+        "Promouvoir le covoiturage",
+        "Organiser le stationnement des véhicules et des vélos",
+        "Rembourser les transports en commun",
+        "Organiser l’usage de la voiture et des deux-roues motorisés",
+        "Améliorer la sécurité routière",
+        "Mettre en place le forfait mobilité durable et l’IKV (indemnité kilométrique vélo)",
+        "Soutenir la transition énergétique du parc de véhicules de l’entreprise",
+        "Déployer des dispositifs financiers d’aide à la mobilité",
+        "Prendre en compte la mobilité des salariés",
+        "Mettre en place un plan de mobilité employeur"
+    ];
 
     // 1. Initialize DuckDB & Load Data + Geo Options
     useEffect(() => {
@@ -105,10 +126,13 @@ const Dashboard: React.FC = () => {
             if (geoWrapperRef.current && !geoWrapperRef.current.contains(event.target as Node)) {
                 setShowGeoSuggestions(false);
             }
+            if (measureWrapperRef.current && !measureWrapperRef.current.contains(event.target as Node)) {
+                setShowMeasureSuggestions(false);
+            }
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [sectorWrapperRef, geoWrapperRef]);
+    }, [sectorWrapperRef, geoWrapperRef, measureWrapperRef]);
 
     // 3. Filter Data using SQL
     useEffect(() => {
@@ -400,17 +424,42 @@ const Dashboard: React.FC = () => {
                     </div>
 
                     {/* Measure Search */}
-                    <div className="md:col-span-3">
+                    <div className="md:col-span-3 relative" ref={measureWrapperRef}>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Mesure détectée
                         </label>
                         <input
                             type="text"
                             value={measureSearch}
-                            onChange={e => setMeasureSearch(e.target.value)}
+                            onChange={e => {
+                                setMeasureSearch(e.target.value);
+                                setShowMeasureSuggestions(true);
+                            }}
+                            onFocus={() => setShowMeasureSuggestions(true)}
                             className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
                             placeholder="Ex: forfait, vélo..."
                         />
+                        {showMeasureSuggestions && (
+                            <ul className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                                {IDFM_MEASURES.filter(m => m.toLowerCase().includes(measureSearch.toLowerCase())).length > 0 ? 
+                                    IDFM_MEASURES.filter(m => m.toLowerCase().includes(measureSearch.toLowerCase())).map((measure) => (
+                                    <li
+                                        key={measure}
+                                        className="text-gray-900 dark:text-gray-200 cursor-pointer select-none relative py-2 pl-3 pr-4 hover:bg-indigo-600 hover:text-white"
+                                        onClick={() => {
+                                            setMeasureSearch(measure);
+                                            setShowMeasureSuggestions(false);
+                                        }}
+                                    >
+                                        <span className="block truncate" title={measure}>{measure}</span>
+                                    </li>
+                                )) : (
+                                    <li className="text-gray-500 dark:text-gray-400 cursor-default select-none relative py-2 pl-3 pr-9">
+                                        Aucune mesure IDFM correspondante
+                                    </li>
+                                )}
+                            </ul>
+                        )}
                     </div>
 
                     {/* Sector Chips Input */}
