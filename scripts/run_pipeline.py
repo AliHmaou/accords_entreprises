@@ -3,6 +3,7 @@ import sys
 import argparse
 import subprocess
 import pandas as pd
+import shutil
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -360,6 +361,23 @@ def run():
                     upload_hf.upload_to_huggingface(
                         str(final_output_enrichi), hf_repo, hf_token, geo_name
                     )
+
+        # Nettoyage des dossiers temporaires pour libérer de l'espace disque
+        if extracted_base.exists():
+            try:
+                shutil.rmtree(str(extracted_base))
+                print(f"\nNettoyage : Dossier temporaire {extracted_base} supprimé.")
+            except Exception as e:
+                print(f"\nErreur lors de la suppression de {extracted_base} : {e}")
+
+        # Déplacement de l'archive traitée dans le dossier 'done' pour reprise sur incident
+        done_dir = archive_path.parent / "done"
+        done_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            shutil.move(str(archive_path), str(done_dir / archive_path.name))
+            print(f"Succès : Archive {archive_path.name} déplacée vers {done_dir}")
+        except Exception as e:
+            print(f"Erreur lors du déplacement de {archive_path.name} : {e}")
 
     print("\n=== PIPELINE TERMINÉ AVEC SUCCÈS ===")
 
