@@ -123,13 +123,19 @@ def process_documents(metadata_path: str, keywords_csv: str, output_path: str):
 
         chunks = extract_chunks_per_keyword(text, regex, mapping, context_window=1)
 
+        base = row.to_dict()
         if chunks:
             accords_avec_mobilite += 1
-            base = row.to_dict()
             base['mentionne_mobilite'] = True
             for chunk_info in chunks:
                 new_row = {**base, **chunk_info}
                 rows.append(new_row)
+        else:
+            base['mentionne_mobilite'] = False
+            base['theme_recherche'] = None
+            base['categorie_mot_cle'] = None
+            base['extrait_chunk'] = None
+            rows.append(base)
 
     total = len(df)
     print(f"--- STATISTIQUES JALON 1 ---")
