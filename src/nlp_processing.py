@@ -132,9 +132,9 @@ def process_documents(metadata_path: str, keywords_csv: str, output_path: str):
                 rows.append(new_row)
         else:
             base['mentionne_mobilite'] = False
-            base['theme_recherche'] = None
-            base['categorie_mot_cle'] = None
-            base['extrait_chunk'] = None
+            base['theme_recherche'] = "AUCUNE_CORRESPONDANCE"
+            base['categorie_mot_cle'] = "AUCUNE_CORRESPONDANCE"
+            base['extrait_chunk'] = "AUCUNE_CORRESPONDANCE"
             rows.append(base)
 
     total = len(df)

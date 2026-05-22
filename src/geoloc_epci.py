@@ -108,16 +108,14 @@ def enrich_accords_with_geoloc(
         g.localisation_departement_nom,
         g.localisation_epci_id,
         g.localisation_epci_nom,
-        t.EPT AS localisation_ept_id,
-        t.LIBEPT AS localisation_ept_nom,
+        CAST(NULL AS VARCHAR) AS localisation_ept_id,
+        CAST(NULL AS VARCHAR) AS localisation_ept_nom,
         u.categorieEntreprise AS categorie_entreprise
     FROM read_parquet('{accords_parquet}') a
     LEFT JOIN read_parquet('{sirene_url}') s
         ON a.SIRET = s.siret
     LEFT JOIN read_parquet('{geo_ref_parquet}') g
         ON s.plg_code_commune = g.plg_code_commune
-    LEFT JOIN read_parquet('{ept_parquet}') t
-        ON s.plg_code_commune = t.plg_code_commune
     LEFT JOIN read_parquet('{unites_legales_parquet}') u
         ON substr(a.SIRET, 1, 9) = u.siren
     """
@@ -136,20 +134,15 @@ def process_geoloc(accords_in: str, accords_out: str):
 
     ref_csv = base_dir / "data/inputs/referentiels/fr-esr-referentiel-geographique.csv"
     unites_legales_parquet = base_dir / "data/inputs/referentiels/StockUniteLegale_utf8.parquet"
-    ept_url = "https://www.insee.fr/fr/statistiques/fichier/2510634/ept_au_01-01-2026.zip"
-
-    ept_zip = tmp_dir / "ept.zip"
-    ept_parquet = tmp_dir / "ept_mapping.parquet"
+    
     geo_ref_parquet = tmp_dir / "geo_referentiel.parquet"
 
-    download_file(ept_url, str(ept_zip))
-    extract_mapping(str(ept_zip), str(ept_parquet), "EPT")
     build_geo_referentiel(str(ref_csv), str(geo_ref_parquet))
 
     enrich_accords_with_geoloc(
         accords_in,
         str(geo_ref_parquet),
-        str(ept_parquet),
+        None,  # Désactivation EPT temporaire
         str(unites_legales_parquet),
         accords_out
     )
