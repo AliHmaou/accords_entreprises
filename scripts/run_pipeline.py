@@ -235,109 +235,124 @@ def run():
         # 2. Metadata Parsing
         if do_parse:
             print("\n--- PARSING METADONNEES ---")
-            if not xml_dir or not xml_dir.exists():
-                print(
-                    f"Dossier XML introuvable pour {archive_stem}. "
-                    "L'extraction a-t-elle été faite ?"
-                )
-                continue
-            df_meta = metadata_parser.parse_all_metadata(str(xml_dir))
-            df_meta['source_archive'] = archive_path.name
-            interim_dir.mkdir(parents=True, exist_ok=True)
-            df_meta.to_parquet(str(metadata_initial))
-            print(f"Métadonnées sauvegardées dans {metadata_initial}")
+            if metadata_initial.exists():
+                print(f"✅ Le fichier {metadata_initial.name} existe déjà. Étape ignorée.")
+            else:
+                if not xml_dir or not xml_dir.exists():
+                    print(
+                        f"Dossier XML introuvable pour {archive_stem}. "
+                        "L'extraction a-t-elle été faite ?"
+                    )
+                    continue
+                df_meta = metadata_parser.parse_all_metadata(str(xml_dir))
+                df_meta['source_archive'] = archive_path.name
+                interim_dir.mkdir(parents=True, exist_ok=True)
+                df_meta.to_parquet(str(metadata_initial))
+                print(f"Métadonnées sauvegardées dans {metadata_initial}")
 
         # 3. Conversion to Markdown
         if do_convert:
             print("\n--- CONVERSION PANDOC ---")
-            if not metadata_initial.exists():
-                print(f"Fichier manquant: {metadata_initial}")
-                continue
-            if not bureautique_dir or not bureautique_dir.exists():
-                print(f"Dossier bureautique introuvable pour {archive_stem}.")
-                continue
-            df_meta = pd.read_parquet(str(metadata_initial))
-            df_md = conversion.convert_documents(
-                df_meta, str(bureautique_dir), str(md_dir), num_workers=4
-            )
-            df_md.to_parquet(str(metadata_with_md))
-            print(f"Markdown paths sauvegardés dans {metadata_with_md}")
+            if metadata_with_md.exists():
+                print(f"✅ Le fichier {metadata_with_md.name} existe déjà. Étape ignorée.")
+            else:
+                if not metadata_initial.exists():
+                    print(f"Fichier manquant: {metadata_initial}")
+                    continue
+                if not bureautique_dir or not bureautique_dir.exists():
+                    print(f"Dossier bureautique introuvable pour {archive_stem}.")
+                    continue
+                df_meta = pd.read_parquet(str(metadata_initial))
+                df_md = conversion.convert_documents(
+                    df_meta, str(bureautique_dir), str(md_dir), num_workers=4
+                )
+                df_md.to_parquet(str(metadata_with_md))
+                print(f"Markdown paths sauvegardés dans {metadata_with_md}")
 
         # 4. NLP Processing (Jalon 1)
         if do_nlp:
             print("\n--- JALON 1: RECHERCHE Mots-Clés ---")
-            if not metadata_with_md.exists():
-                print(f"Fichier manquant: {metadata_with_md}")
-                continue
-            nlp_processing.process_documents(
-                str(metadata_with_md), str(kw_csv), str(metadata_with_context)
-            )
+            if metadata_with_context.exists():
+                print(f"✅ Le fichier {metadata_with_context.name} existe déjà. Étape ignorée.")
+            else:
+                if not metadata_with_md.exists():
+                    print(f"Fichier manquant: {metadata_with_md}")
+                    continue
+                nlp_processing.process_documents(
+                    str(metadata_with_md), str(kw_csv), str(metadata_with_context)
+                )
 
         # 5. LLM Analysis (Jalon 2 & 3)
         if do_llm:
             print("\n--- JALON 2: ANALYSE IA ---")
-            if not metadata_with_context.exists():
-                print(f"Fichier manquant: {metadata_with_context}")
-                continue
-
-            print(f"Filtrage des accords pour l'année {target_year}...")
-            df_temp = pd.read_parquet(str(metadata_with_context))
-
-            if 'DATE_TEXTE' in df_temp.columns:
-                if target_year.lower() == 'all':
-                    n = df_temp['mentionne_mobilite'].sum()
-                    print(f"Traitement sur toutes les années. Accords mobilité: {n}")
-                else:
-                    df_temp['DATE_TEXTE_DT'] = pd.to_datetime(
-                        df_temp['DATE_TEXTE'], errors='coerce'
-                    )
-                    year_mask = df_temp['DATE_TEXTE_DT'].dt.year == int(target_year)
-                    df_temp.loc[~year_mask, 'mentionne_mobilite'] = False
-                    n = df_temp['mentionne_mobilite'].sum()
-                    print(
-                        f"Accords évoquant la mobilité dans l'année {target_year}: {n}"
-                    )
-                    df_temp = df_temp.drop(columns=['DATE_TEXTE_DT'])
-
-                temp_context = metadata_with_context.with_suffix('.temp.parquet')
-                df_temp.to_parquet(temp_context)
-                llm_analysis.process_llm(
-                    str(temp_context), 
-                    str(final_output), 
-                    str(kw_csv), 
-                    idfm_referentiel_csv=str(idfm_csv),
-                    verbose=verbose,
-                    batch_size=batch_size
-                )
-                if temp_context.exists():
-                    temp_context.unlink()
+            if final_output.exists():
+                print(f"✅ Le fichier {final_output.name} existe déjà. Étape ignorée.")
             else:
-                print("Colonne DATE_TEXTE introuvable, traitement sans filtre temporel.")
-                llm_analysis.process_llm(
-                    str(metadata_with_context), 
-                    str(final_output), 
-                    str(kw_csv), 
-                    idfm_referentiel_csv=str(idfm_csv),
-                    verbose=verbose,
-                    batch_size=batch_size
-                )
+                if not metadata_with_context.exists():
+                    print(f"Fichier manquant: {metadata_with_context}")
+                    continue
+
+                print(f"Filtrage des accords pour l'année {target_year}...")
+                df_temp = pd.read_parquet(str(metadata_with_context))
+
+                if 'DATE_TEXTE' in df_temp.columns:
+                    if target_year.lower() == 'all':
+                        n = df_temp['mentionne_mobilite'].sum()
+                        print(f"Traitement sur toutes les années. Accords mobilité: {n}")
+                    else:
+                        df_temp['DATE_TEXTE_DT'] = pd.to_datetime(
+                            df_temp['DATE_TEXTE'], errors='coerce'
+                        )
+                        year_mask = df_temp['DATE_TEXTE_DT'].dt.year == int(target_year)
+                        df_temp.loc[~year_mask, 'mentionne_mobilite'] = False
+                        n = df_temp['mentionne_mobilite'].sum()
+                        print(
+                            f"Accords évoquant la mobilité dans l'année {target_year}: {n}"
+                        )
+                        df_temp = df_temp.drop(columns=['DATE_TEXTE_DT'])
+
+                    temp_context = metadata_with_context.with_suffix('.temp.parquet')
+                    df_temp.to_parquet(temp_context)
+                    llm_analysis.process_llm(
+                        str(temp_context), 
+                        str(final_output), 
+                        str(kw_csv), 
+                        idfm_referentiel_csv=str(idfm_csv),
+                        verbose=verbose,
+                        batch_size=batch_size
+                    )
+                    if temp_context.exists():
+                        temp_context.unlink()
+                else:
+                    print("Colonne DATE_TEXTE introuvable, traitement sans filtre temporel.")
+                    llm_analysis.process_llm(
+                        str(metadata_with_context), 
+                        str(final_output), 
+                        str(kw_csv), 
+                        idfm_referentiel_csv=str(idfm_csv),
+                        verbose=verbose,
+                        batch_size=batch_size
+                    )
 
         # 6. Enrichissement SIRENE et référentiel géographique
         if do_enrich:
             print("\n--- JALON 3: ENRICHISSEMENT GEOGRAPHIQUE ---")
-            # Priorité : final_output (LLM), sinon metadata_with_context
-            if final_output.exists():
-                source_for_enrich = final_output
-            elif metadata_with_context.exists():
-                print(
-                    "Fichier LLM absent, utilisation de metadata_with_context "
-                    "comme source pour l'enrichissement."
-                )
-                source_for_enrich = metadata_with_context
+            if final_output_enrichi.exists():
+                print(f"✅ Le fichier {final_output_enrichi.name} existe déjà. Étape ignorée.")
             else:
-                print(f"Aucun fichier source valide pour enrichir {archive_stem}.")
-                continue
-            geoloc_epci.process_geoloc(str(source_for_enrich), str(final_output_enrichi))
+                # Priorité : final_output (LLM), sinon metadata_with_context
+                if final_output.exists():
+                    source_for_enrich = final_output
+                elif metadata_with_context.exists():
+                    print(
+                        "Fichier LLM absent, utilisation de metadata_with_context "
+                        "comme source pour l'enrichissement."
+                    )
+                    source_for_enrich = metadata_with_context
+                else:
+                    print(f"Aucun fichier source valide pour enrichir {archive_stem}.")
+                    continue
+                geoloc_epci.process_geoloc(str(source_for_enrich), str(final_output_enrichi))
 
         # 7. Upload to Hugging Face
         if do_upload:
