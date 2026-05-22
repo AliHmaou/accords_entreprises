@@ -27,8 +27,7 @@ def extract_mapping(zip_path: str, output_parquet: str, mode: str):
     df = pd.read_excel(
         extracted_path,
         sheet_name="Composition_communale",
-        skiprows=5,
-        engine="calamine"
+        skiprows=5
     )
 
     if mode == "EPT":
