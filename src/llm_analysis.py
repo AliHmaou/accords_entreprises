@@ -53,7 +53,7 @@ def extract_json_from_text(text: str):
         
     raise json.JSONDecodeError("Impossible de trouver un bloc JSON valide", text, 0)
 
-def analyze_context_llm(client: OpenAI, model: str, doc_id: str, context: str, categories: list, idfm_measures: list = None, max_retries: int = 3, verbose: bool = False, temperature: float = 0.0) -> dict:
+def analyze_context_llm(client: OpenAI, model: str, doc_id: str, context: str, keyword: str, categories: list, idfm_measures: list = None, max_retries: int = 3, verbose: bool = False, temperature: float = 0.0) -> dict:
     categories_str = ", ".join(categories)
     idfm_measures_str = ", ".join(idfm_measures) if idfm_measures else "Pas de référentiel disponible"
     
@@ -63,6 +63,8 @@ Les données fournies sont des extraits d'accords professionnels.
 
 STRUCTURE DE L'EXTRAIT :
 L'extrait commence par une balise "TITRE SECTION :" qui indique la partie du document d'où provient le texte. Utilise cette information pour mieux comprendre le contexte de l'accord.
+
+Un mot-clé lié à la mobilité a été détecté par notre système pour cet extrait : "{keyword}".
 
 Voici l'extrait pour l'accord {doc_id} :
 {context}
@@ -95,7 +97,7 @@ Instructions pour les champs :
   par l'entreprise, sous la forme d'une liste.
 * "moyens_financiers": Moyens financiers concernant les mobilités proposés par l'entreprise sous
   la forme d'une liste.
-* "mesures_ref_idfm": Tu DOIS choisir la mesure la plus pertinente UNIQUEMENT parmi la liste suivante (respecte scrupuleusement le libellé exact) :
+* "mesures_ref_idfm": Tu DOIS choisir la mesure la plus pertinente en tenant aussi compte du mot clé détecté ("{keyword}") et UNIQUEMENT parmi la liste suivante (respecte scrupuleusement le libellé exact) :
 {idfm_measures_str}
 Si aucune mesure ne correspond vraiment, répond exactement "hors mesures IDFM".
 """
@@ -151,11 +153,12 @@ def analyze_context_llm_batch(client: OpenAI, model: str, batch: list, categorie
     
     extraits_text = ""
     for item in batch:
-        extraits_text += f'<extrait chunk_key="{item["chunk_key"]}" ID="{item["ID"]}">\n{item["context"]}\n</extrait>\n\n'
+        kw = item.get("keyword", "")
+        extraits_text += f'<extrait chunk_key="{item["chunk_key"]}" ID="{item["ID"]}" mot_cle_detecte="{kw}">\n{item["context"]}\n</extrait>\n\n'
 
     prompt = f"""
 Au service d'une autorité organisatrice des mobilités, et en tant que chargé de développement des mobilités durables en entreprises.
-Tu vas recevoir un lot de plusieurs extraits d'accords professionnels. Chaque extrait est encapsulé dans une balise <extrait> avec un attribut 'chunk_key' et 'ID'.
+Tu vas recevoir un lot de plusieurs extraits d'accords professionnels. Chaque extrait est encapsulé dans une balise <extrait> avec des attributs 'chunk_key', 'ID' et 'mot_cle_detecte'.
 
 Voici les extraits à analyser :
 {extraits_text}
@@ -197,7 +200,7 @@ Instructions pour les champs :
   par l'entreprise, sous la forme d'une liste.
 * "moyens_financiers": Moyens financiers concernant les mobilités proposés par l'entreprise sous
   la forme d'une liste.
-* "mesures_ref_idfm": Tu DOIS choisir la mesure la plus pertinente UNIQUEMENT parmi la liste suivante (respecte scrupuleusement le libellé exact) :
+* "mesures_ref_idfm": Tu DOIS choisir la mesure la plus pertinente en tenant aussi compte du mot clé détecté (fourni dans l'attribut 'mot_cle_detecte' de la balise) et UNIQUEMENT parmi la liste suivante (respecte scrupuleusement le libellé exact) :
 {idfm_measures_str}
 Si aucune mesure ne correspond vraiment, répond exactement "hors mesures IDFM".
 
@@ -269,10 +272,10 @@ def _normalize_result(res: dict) -> dict:
     res["mesures_ref_idfm"] = str(res.get("mesures_ref_idfm", "hors mesures IDFM"))
     return res
 
-def _process_chunk_fallback(client: OpenAI, model: str, doc_id: str, context: str, chunk_key: str, categories: list, idfm_measures: list, verbose: bool, temperature: float) -> dict:
+def _process_chunk_fallback(client: OpenAI, model: str, doc_id: str, context: str, chunk_key: str, keyword: str, categories: list, idfm_measures: list, verbose: bool, temperature: float) -> dict:
     """Fallback function to process a single chunk using individual LLM call."""
     if client:
-        res = analyze_context_llm(client, model, doc_id, context, categories, idfm_measures=idfm_measures, verbose=verbose, temperature=temperature)
+        res = analyze_context_llm(client, model, doc_id, context, keyword, categories, idfm_measures=idfm_measures, verbose=verbose, temperature=temperature)
     else:
         res = analyze_context_mock(doc_id, context, categories)
     return res
@@ -325,8 +328,11 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
     def make_hash(x):
         return hashlib.md5(str(x).encode()).hexdigest()[:8]
 
+    # Combinaison ID + mot-clé + hash du chunk pour permettre à l'IA d'analyser le même texte sous des angles différents (Option B)
     to_process['_chunk_key'] = (
-        to_process['ID'].astype(str) + '_' + to_process[chunk_col].fillna('').apply(make_hash)
+        to_process['ID'].astype(str) + '_' + 
+        to_process['theme_recherche'].fillna('').apply(make_hash) + '_' + 
+        to_process[chunk_col].fillna('').apply(make_hash)
     )
 
     unique_chunks = to_process.drop_duplicates(subset='_chunk_key')
@@ -362,6 +368,7 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
             valid_chunks_list.append({
                 "chunk_key": chunk_key,
                 "ID": doc_id,
+                "keyword": row.get('theme_recherche', ''),
                 "context": context
             })
 
@@ -415,7 +422,7 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
                     for item in batch:
                         if item["chunk_key"] in missing_keys:
                             print(f"Fallback individuel pour {item['ID']}")
-                            fallback_res = _process_chunk_fallback(client, model, item["ID"], item["context"], item["chunk_key"], categories, idfm_measures, verbose, temperature)
+                            fallback_res = _process_chunk_fallback(client, model, item["ID"], item["context"], item["chunk_key"], item.get("keyword", ""), categories, idfm_measures, verbose, temperature)
                             chunk_cache[item["chunk_key"]] = _normalize_result(fallback_res)
                             
                 # Enregistrer les résultats réussis du batch
@@ -427,7 +434,7 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
             except Exception as batch_error:
                 print(f"[Attention] Echec du batch complet ({batch_error}). Bascule en mode dégradé (individuel) pour ce lot.")
                 for item in batch:
-                    fallback_res = _process_chunk_fallback(client, model, item["ID"], item["context"], item["chunk_key"], categories, idfm_measures, verbose, temperature)
+                    fallback_res = _process_chunk_fallback(client, model, item["ID"], item["context"], item["chunk_key"], item.get("keyword", ""), categories, idfm_measures, verbose, temperature)
                     chunk_cache[item["chunk_key"]] = _normalize_result(fallback_res)
         else:
             # Mode MOCK
