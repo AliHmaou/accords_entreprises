@@ -73,8 +73,10 @@ def choose_source_parquet(base_dir: Path, label: str) -> Path | None:
 def run():
     parser = argparse.ArgumentParser(description="Pipeline des Accords Professionnels")
     parser.add_argument("--verbose", action="store_true", help="Affiche les prompts et réponses LLM")
+    parser.add_argument("--batch-size", type=int, default=5, help="Taille max d'un lot d'extraits pour le LLM")
     args, unknown = parser.parse_known_args()
     verbose = args.verbose
+    batch_size = args.batch_size
 
     # Load .env file
     load_dotenv(Path(__file__).parent.parent / ".env")
@@ -303,7 +305,8 @@ def run():
                     str(final_output), 
                     str(kw_csv), 
                     idfm_referentiel_csv=str(idfm_csv),
-                    verbose=verbose
+                    verbose=verbose,
+                    batch_size=batch_size
                 )
                 if temp_context.exists():
                     temp_context.unlink()
@@ -314,7 +317,8 @@ def run():
                     str(final_output), 
                     str(kw_csv), 
                     idfm_referentiel_csv=str(idfm_csv),
-                    verbose=verbose
+                    verbose=verbose,
+                    batch_size=batch_size
                 )
 
         # 6. Enrichissement SIRENE et référentiel géographique

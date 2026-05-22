@@ -455,6 +455,20 @@ const Dashboard: React.FC = () => {
         return uniqueIds.size;
     }, [filteredAgreements]);
 
+    // Agreements with mobility count
+    const agreementsWithMobilityCount = useMemo(() => {
+        const ids = new Set();
+        filteredAgreements.forEach(a => {
+            if (checkMobility(a)) ids.add(a.ID);
+        });
+        return ids.size;
+    }, [filteredAgreements]);
+
+    // Measures detected count
+    const measuresDetectedCount = useMemo(() => {
+        return filteredAgreements.filter(a => checkMobility(a)).length;
+    }, [filteredAgreements]);
+
     // Pagination Logic
     const paginatedAgreements = useMemo(() => {
         const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -674,7 +688,7 @@ const Dashboard: React.FC = () => {
 
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex justify-between items-center">
                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <span className="text-indigo-600 dark:text-indigo-400">{filteredAgreements.length}</span> mesure(s) détectée(s) dans <span className="text-indigo-600 dark:text-indigo-400">{uniqueAgreementsCount}</span> accord(s)
+                        <span className="text-indigo-600 dark:text-indigo-400">{measuresDetectedCount}</span> mesure(s) détectée(s) dans <span className="text-indigo-600 dark:text-indigo-400">{agreementsWithMobilityCount}</span> accord(s) sur un total de <span className="text-indigo-600 dark:text-indigo-400">{uniqueAgreementsCount}</span> accord(s) analysés.
                      </p>
                      
                      <label className="text-sm font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer flex items-center">
