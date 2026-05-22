@@ -456,8 +456,11 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
         df.loc[mask, col] = to_process['_chunk_key'].map(
             lambda k: chunk_cache.get(k, {}).get(col)
         ).values
+        # Pour les accords sans aucune correspondance de mot-clé
+        df.loc[~mask, col] = "AUCUNE_CORRESPONDANCE"
 
     df['llm_model_used'] = model if client else "MOCK"
+    df.loc[~mask, 'llm_model_used'] = "AUCUNE_CORRESPONDANCE"
 
     if 'ID' in df.columns and 'url_legifrance' not in df.columns:
         df['url_legifrance'] = df['ID'].apply(
@@ -471,6 +474,7 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
         df['mesure_extraite'] = df['resume_mesure_proposee'].apply(
             lambda x: _parse_list_to_str(x) if pd.notna(x) else None
         )
+    df.loc[~mask, 'mesure_extraite'] = "AUCUNE_CORRESPONDANCE"
 
     df.to_parquet(output_parquet)
     print(f"Analyse terminée. Fichier final sauvegardé dans : {output_parquet}")
