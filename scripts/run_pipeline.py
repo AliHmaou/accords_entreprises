@@ -17,6 +17,7 @@ import nlp_processing
 import llm_analysis
 import geoloc_epci
 import upload_hf
+import deduplicate
 
 
 def prompt_step(step_name: str) -> bool:
@@ -126,11 +127,13 @@ def run():
                 print("Le token Hugging Face (HF_TOKEN) est introuvable dans le .env.")
             else:
                 if final_output.exists():
+                    deduplicate.deduplicate_parquet(str(final_output))
                     simple_name = "IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES.parquet"
                     upload_hf.upload_to_huggingface(
                         str(final_output), hf_repo, hf_token, simple_name
                     )
                 if final_output_enrichi.exists():
+                    deduplicate.deduplicate_parquet(str(final_output_enrichi))
                     geo_name = (
                         "IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet"
                     )
@@ -365,11 +368,13 @@ def run():
                 print("Le token Hugging Face (HF_TOKEN) est introuvable dans le .env.")
             else:
                 if final_output.exists():
+                    deduplicate.deduplicate_parquet(str(final_output))
                     simple_name = "IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES.parquet"
                     upload_hf.upload_to_huggingface(
                         str(final_output), hf_repo, hf_token, simple_name
                     )
                 if final_output_enrichi.exists():
+                    deduplicate.deduplicate_parquet(str(final_output_enrichi))
                     geo_name = (
                         "IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet"
                     )
