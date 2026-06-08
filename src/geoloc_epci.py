@@ -87,8 +87,7 @@ def enrich_accords_with_geoloc(
     output_parquet: str
 ):
     sirene_url = (
-        "https://object.files.data.gouv.fr/data-pipeline-open/siren/geoloc/"
-        "GeolocalisationEtablissement_Sirene_pour_etudes_statistiques_utf8.parquet"
+        "/home/onyxia/work/ACCORDS_PROFESSIONNELS/data/inputs/referentiels/geoloc-geolocalisationetablissement-sirene-pour-etudes-statistiques-parquet.parquet"
     )
 
     print("Enrichissement des accords avec les données SIRENE + référentiel géo + Unités Légales via DuckDB...")

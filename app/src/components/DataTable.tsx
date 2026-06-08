@@ -110,6 +110,9 @@ const DataTable: React.FC<DataTableProps> = ({
                             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[35%]">
                                 Mesure détectée
                             </th>
+                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[15%]">
+                                ID Accord
+                            </th>
                             <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[10%]">
                                 Date dépôt
                             </th>
@@ -176,6 +179,18 @@ const DataTable: React.FC<DataTableProps> = ({
                                      <div className="text-sm font-medium text-gray-900 dark:text-white leading-snug line-clamp-2" title={agreement.mesures_ref_idfm}>
                                         <HighlightedText text={agreement.mesures_ref_idfm || 'Non catégorisé'} highlight={highlightTerm} />
                                      </div>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                    <a 
+                                        href={`https://www.legifrance.gouv.fr/acco/id/${agreement.ID}`} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 hover:underline"
+                                        onClick={(e) => e.stopPropagation()}
+                                        title="Voir sur Légifrance"
+                                    >
+                                        {agreement.ID}
+                                    </a>
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">
                                     {formatDate(agreement.DATE_DEPOT)}
