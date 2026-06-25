@@ -75,6 +75,10 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
     const isMentionneIA = ['oui', 'true', '1'].includes(mentionneIAVal);
     const isMentionneIANo = mentionneIAVal === 'non' || mentionneIAVal === 'false' || mentionneIAVal === '0';
 
+    // Handle est_revendication
+    const isRevendicationVal = String(agreement.est_revendication || '').toLowerCase();
+    const isRevendication = ['oui', 'true', '1'].includes(isRevendicationVal);
+
     const getMarkdownContent = (text: string, highlight: string) => {
         if (!text) return { __html: '' };
 
@@ -128,9 +132,21 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                         </h2>
                         <div className="flex items-center gap-2 mt-0.5">
                              <span className="text-xs text-gray-500 font-mono">SIRET: {agreement.SIRET}</span>
-                             <button 
+                             {agreement.ID && (
+                                 <>
+                                     <span className="text-gray-300 dark:text-gray-600">|</span>
+                                     <span 
+                                        className="text-xs text-gray-500 font-mono cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" 
+                                        title="Copier l'ID" 
+                                        onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(agreement.ID); alert("ID copié !"); }}
+                                     >
+                                        ID: {agreement.ID}
+                                     </span>
+                                 </>
+                             )}
+                             <button
                                 onClick={openGoogleMaps}
-                                className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold flex items-center gap-1 bg-indigo-50 px-2 py-0.5 rounded-full hover:bg-indigo-100 transition-colors"
+                                className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold flex items-center gap-1 bg-indigo-50 px-2 py-0.5 rounded-full hover:bg-indigo-100 transition-colors ml-2"
                              >
                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                 Localiser
@@ -153,6 +169,11 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                         {isMentionneIANo && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" title="L'IA a détecté que le mot-clé est probablement un faux positif lexical">
                                 ⚠️ Faux positif probable
+                            </span>
+                        )}
+                        {isRevendication && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" title="Il s'agit d'une revendication syndicale ou d'un objectif de négociation, pas d'une mesure actée">
+                                📢 Revendication
                             </span>
                         )}
                         {isMobility && (

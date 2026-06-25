@@ -30,6 +30,7 @@ export interface Agreement {
   mot_cle_calcule?: string;
   mentionne_mobilite_ia?: string; // confirmation IA que l'extrait traite bien de mobilité
   est_mobilites_durables?: string;
+  est_revendication?: string;
   moyens_materiels?: string;
   moyens_financiers?: string;
   mesures_ref_idfm?: string;      // mesure issue du référentiel IDFM

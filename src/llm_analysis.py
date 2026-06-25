@@ -76,12 +76,14 @@ Répond EXCLUSIVEMENT en JSON valide selon cette structure :
   "mot_cle": "un seul mot-clé issu de cette liste : {categories_str}",
   "mentionne_mobilite_ia": "Oui ou Non",
   "est_mobilites_durables": "Oui ou Non",
+  "est_revendication": "Oui ou Non",
   "moyens_materiels": ["moyen 1", "moyen 2"],
   "moyens_financiers": ["moyen financier 1", "moyen financier 2"],
   "mesures_ref_idfm": "Libellé exact du référentiel IDFM"
 }}
 
 Instructions pour les champs :
+* "est_revendication": Répond "Oui" si l'extrait est formulé comme une demande, une revendication syndicale préalable ou un point à aborder lors des négociations. Répond "Non" s'il s'agit d'une mesure définitivement actée par un accord.
 * "ID": Rappeler l'identifiant du texte.
 * "mesures_proposees": Mesures concrètes proposées concernant les mobilités sous forme d'une liste
   (en 10 mots max par mesure, commençant par un verbe à l'infinitif, un complément d'objet et un
@@ -108,6 +110,7 @@ Si aucune mesure ne correspond vraiment, répond exactement "hors mesures IDFM".
         "mot_cle": None,
         "mentionne_mobilite_ia": None,
         "est_mobilites_durables": None,
+        "est_revendication": None,
         "moyens_materiels": [],
         "moyens_financiers": [],
         "mesures_ref_idfm": "hors mesures IDFM"
@@ -175,6 +178,7 @@ STRUCTURE DE REPONSE ATTENDUE (Objet JSON strict) :
       "mot_cle": "un seul mot-clé issu de cette liste : {categories_str}",
       "mentionne_mobilite_ia": "Oui ou Non",
       "est_mobilites_durables": "Oui ou Non",
+      "est_revendication": "Oui ou Non",
       "moyens_materiels": ["moyen 1", "moyen 2"],
       "moyens_financiers": ["moyen financier 1", "moyen financier 2"],
       "mesures_ref_idfm": "Libellé exact du référentiel IDFM"
@@ -183,6 +187,7 @@ STRUCTURE DE REPONSE ATTENDUE (Objet JSON strict) :
 }}
 
 Instructions pour les champs :
+* "est_revendication": Répond "Oui" si l'extrait est formulé comme une demande, une revendication syndicale préalable ou un point à aborder lors des négociations. Répond "Non" s'il s'agit d'une mesure définitivement actée par un accord.
 * Respecte strictement le format JSON. Echappe correctement les guillemets dans le texte.
 * "chunk_key" et "ID" : Il est impératif de recopier exactement les identifiants fournis dans la balise <extrait>.
 * "mesures_proposees": Mesures concrètes proposées concernant les mobilités sous forme d'une liste
@@ -269,6 +274,7 @@ def _normalize_result(res: dict) -> dict:
     res["mot_cle_calcule"] = str(res.get("mot_cle", ""))
     res["est_mobilites_durables"] = str(res.get("est_mobilites_durables", ""))
     res["mentionne_mobilite_ia"] = str(res.get("mentionne_mobilite_ia", ""))
+    res["est_revendication"] = str(res.get("est_revendication", ""))
     res["mesures_ref_idfm"] = str(res.get("mesures_ref_idfm", "hors mesures IDFM"))
     return res
 
@@ -361,6 +367,7 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
                 "mot_cle": None,
                 "mentionne_mobilite_ia": None,
                 "est_mobilites_durables": None,
+                "est_revendication": None,
                 "moyens_materiels": [],
                 "moyens_financiers": []
             })
@@ -444,7 +451,7 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
 
     target_columns = [
         "resume_mesure_proposee", "mot_cle_calcule",
-        "mentionne_mobilite_ia", "est_mobilites_durables",
+        "mentionne_mobilite_ia", "est_mobilites_durables", "est_revendication",
         "moyens_materiels", "moyens_financiers", "mesures_ref_idfm"
     ]
 
