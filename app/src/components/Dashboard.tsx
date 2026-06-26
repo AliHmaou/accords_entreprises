@@ -558,6 +558,48 @@ const Dashboard: React.FC = () => {
         return data.sort((a, b) => b.total - a.total);
     }, [filteredAgreements]);
 
+    // 6. Proportion d'accords par catégorie d'entreprise en Île-de-France (Donuts)
+    const categoriesIdfMobilityData = useMemo(() => {
+        if (!filteredAgreements || filteredAgreements.length === 0) return {};
+
+        const idfAgreements = filteredAgreements.filter(a => {
+            const reg = a.localisation_region_nom || a.localisation_region;
+            return reg === 'Île-de-France';
+        });
+
+        const idsWithMobility = new Set();
+        idfAgreements.forEach(a => {
+            if (checkMobility(a)) idsWithMobility.add(a.ID);
+        });
+
+        const stats: Record<string, { oui: number, total: number }> = {};
+        const processedIds = new Set();
+
+        idfAgreements.forEach(a => {
+            if (!processedIds.has(a.ID)) {
+                processedIds.add(a.ID);
+                let cat = a.categorie_entreprise || 'INDETERMINE';
+                cat = cat.trim();
+                if (!stats[cat]) stats[cat] = { oui: 0, total: 0 };
+                
+                stats[cat].total++;
+                if (idsWithMobility.has(a.ID)) {
+                    stats[cat].oui++;
+                }
+            }
+        });
+
+        const results: Record<string, { name: string, value: number, fill: string }[]> = {};
+        Object.entries(stats).forEach(([cat, data]) => {
+            results[cat] = [
+                { name: "Avec mobilité", value: data.oui, fill: "#3B82F6" },
+                { name: "Ne mentionne pas", value: data.total - data.oui, fill: "#E5E7EB" }
+            ];
+        });
+
+        return results;
+    }, [filteredAgreements]);
+
 
     // Unique agreements count
     const uniqueAgreementsCount = useMemo(() => {
@@ -899,6 +941,29 @@ const Dashboard: React.FC = () => {
                             </div>
                             
                             <CouronneBarChart title="Proportion d'intégration par mesure et par couronne (%)" data={couronneMobilityData} />
+                        </div>
+                    )}
+
+                    {/* Troisième bloc : Taux d'entreprises franciliennes évoquant les mobilités par catégorie */}
+                    {Object.keys(categoriesIdfMobilityData).length > 0 && (
+                        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-100 dark:border-gray-700">
+                            <div className="mb-6">
+                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                    Taux d'entreprises franciliennes évoquant les mobilités par catégorie
+                                </h2>
+                                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 border-l-4 border-blue-500 pl-4 py-1">
+                                    <p className="font-semibold text-gray-800 dark:text-gray-200">
+                                        Nombre estimé et proportion d'accords distinct mentionnant les mobilités des salariés par catégorie d'entreprise en Île-de-France.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            {/* Les Donuts par catégorie de manière dynamique */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {Object.entries(categoriesIdfMobilityData).map(([cat, chartData]) => (
+                                    <DonutChart key={cat} title={`Catégorie : ${cat}`} data={chartData} />
+                                ))}
+                            </div>
                         </div>
                     )}
 
