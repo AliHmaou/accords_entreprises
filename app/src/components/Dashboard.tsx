@@ -59,6 +59,15 @@ const Dashboard: React.FC = () => {
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
 
+    // Filters States
+    const [searchId, setSearchId] = useState<string>('');
+    const [selectedYear, setSelectedYear] = useState<string>('');
+    const [years, setYears] = useState<number[]>([]);
+
+    // Sorting States
+    const [sortField, setSortField] = useState<string>('DATE_DEPOT');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
     const sectorWrapperRef = useRef<HTMLDivElement>(null);
     const geoWrapperRef = useRef<HTMLDivElement>(null);
     const measureWrapperRef = useRef<HTMLDivElement>(null);
@@ -197,6 +206,17 @@ const Dashboard: React.FC = () => {
                 query += ` AND localisation_region_nom = 'Île-de-France'`;
             }
 
+            // ID Filter
+            if (searchId) {
+                const idTerm = searchId.replace(/'/g, "''").trim().toLowerCase();
+                query += ` AND lower(ID) LIKE '%${idTerm}%'`;
+            }
+
+            // Year Filter
+            if (selectedYear) {
+                query += ` AND year(CAST(DATE_DEPOT AS DATE)) = ${selectedYear}`;
+            }
+
             try {
                 const results = await runQuery(query);
                 if (!isCancelled) {
@@ -220,7 +240,7 @@ const Dashboard: React.FC = () => {
             isCancelled = true;
             clearTimeout(timer);
         };
-    }, [globalSearch, measureSearch, selectedSectors, selectedLocations, onlyMobiliteIA, onlyIDF, dbReady]);
+    }, [globalSearch, measureSearch, selectedSectors, selectedLocations, onlyMobiliteIA, onlyIDF, searchId, selectedYear, dbReady]);
 
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -298,6 +318,15 @@ const Dashboard: React.FC = () => {
 
     const removeLocation = (locName: string) => {
         setSelectedLocations(selectedLocations.filter(l => l.name !== locName));
+    };
+
+    const handleSort = (field: string) => {
+        if (sortField === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortOrder('desc');
+        }
     };
 
     const filteredGeoSuggestions = useMemo(() => {
@@ -897,11 +926,31 @@ const Dashboard: React.FC = () => {
         return filteredAgreements.filter(a => checkMobility(a)).length;
     }, [filteredAgreements]);
 
+    const sortedAgreements = useMemo(() => {
+        if (!sortField) return filteredAgreements;
+        
+        return [...filteredAgreements].sort((a, b) => {
+            let valA = a[sortField as keyof Agreement];
+            let valB = b[sortField as keyof Agreement];
+            
+            if (valA === undefined || valA === null) return 1;
+            if (valB === undefined || valB === null) return -1;
+            
+            if (typeof valA === 'string' && typeof valB === 'string') {
+                return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+            
+            if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+            if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [filteredAgreements, sortField, sortOrder]);
+
     // Pagination Logic
     const paginatedAgreements = useMemo(() => {
         const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-        return filteredAgreements.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-    }, [filteredAgreements, currentPage]);
+        return sortedAgreements.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [sortedAgreements, currentPage]);
 
     return (
         <div className="space-y-6 relative min-h-[500px]">

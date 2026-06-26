@@ -30,7 +30,16 @@ interface DataTableProps {
     currentPage: number;
     itemsPerPage: number;
     onPageChange: (page: number) => void;
+    // Sorting props
+    sortField?: string;
+    sortOrder?: 'asc' | 'desc';
+    onSort?: (field: string) => void;
 }
+
+const SortIndicator: React.FC<{ field: string; currentField: string; order: 'asc' | 'desc' }> = ({ field, currentField, order }) => {
+    if (field !== currentField) return <span className="ml-1 text-gray-400">⇅</span>;
+    return order === 'asc' ? <span className="ml-1 text-indigo-600 dark:text-indigo-400">▲</span> : <span className="ml-1 text-indigo-600 dark:text-indigo-400">▼</span>;
+};
 
 const HighlightedText: React.FC<{ text: string; highlight: string }> = ({ text, highlight }) => {
     if (!highlight.trim()) {
@@ -69,7 +78,10 @@ const DataTable: React.FC<DataTableProps> = ({
     totalUniqueAgreements,
     currentPage,
     itemsPerPage,
-    onPageChange
+    onPageChange,
+    sortField = 'DATE_DEPOT',
+    sortOrder = 'desc',
+    onSort
 }) => {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
@@ -101,20 +113,40 @@ const DataTable: React.FC<DataTableProps> = ({
                             <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-8">
                                 
                             </th>
-                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[15%]">
-                                Secteur
+                            <th 
+                                scope="col" 
+                                className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[15%] cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-600"
+                                onClick={() => onSort?.('SECTEUR')}
+                            >
+                                Secteur <SortIndicator field="SECTEUR" currentField={sortField} order={sortOrder} />
                             </th>
-                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[40%]">
-                                Entreprise & Localisation
+                            <th 
+                                scope="col" 
+                                className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[40%] cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-600"
+                                onClick={() => onSort?.('RAISON_SOCIALE')}
+                            >
+                                Entreprise & Localisation <SortIndicator field="RAISON_SOCIALE" currentField={sortField} order={sortOrder} />
                             </th>
-                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[35%]">
-                                Mesure détectée
+                            <th 
+                                scope="col" 
+                                className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[35%] cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-600"
+                                onClick={() => onSort?.('mesures_ref_idfm')}
+                            >
+                                Mesure détectée <SortIndicator field="mesures_ref_idfm" currentField={sortField} order={sortOrder} />
                             </th>
-                            <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[15%]">
-                                ID Accord
+                            <th 
+                                scope="col" 
+                                className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[15%] cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-600"
+                                onClick={() => onSort?.('ID')}
+                            >
+                                ID Accord <SortIndicator field="ID" currentField={sortField} order={sortOrder} />
                             </th>
-                            <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[10%]">
-                                Date dépôt
+                            <th 
+                                scope="col" 
+                                className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[10%] cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-600"
+                                onClick={() => onSort?.('DATE_DEPOT')}
+                            >
+                                Date dépôt <SortIndicator field="DATE_DEPOT" currentField={sortField} order={sortOrder} />
                             </th>
                         </tr>
                     </thead>
