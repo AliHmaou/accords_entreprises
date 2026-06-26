@@ -745,6 +745,94 @@ const Dashboard: React.FC = () => {
         };
     }, [filteredAgreements]);
 
+    // 9. Distribution en PROPORTION (%) du nombre de mesures de 1 à 10 par catégorie d'entreprise en Île-de-France
+    const categoryMeasuresDistributionPercentData = useMemo(() => {
+        if (!filteredAgreements || filteredAgreements.length === 0) return { chartData: [], categories: [] };
+
+        const idfAgreements = filteredAgreements.filter(a => {
+            const reg = a.localisation_region_nom || a.localisation_region;
+            return reg === 'Île-de-France';
+        });
+
+        const categories = new Set<string>();
+        const siretMeasures: Record<string, { cat: string, measures: Set<string> }> = {};
+
+        idfAgreements.forEach(a => {
+            const siret = a.SIRET;
+            if (!siret) return;
+
+            let cat = a.categorie_entreprise;
+            if (!cat || cat === 'null' || cat.trim() === '') {
+                cat = 'INDETERMINE';
+            } else {
+                cat = cat.trim();
+            }
+            categories.add(cat);
+
+            const measure = a.mesures_ref_idfm;
+            const isValidMeasure = measure && measure !== 'AUCUNE_CORRESPONDANCE' && measure !== 'hors mesures IDFM';
+
+            if (isValidMeasure) {
+                if (!siretMeasures[siret]) {
+                    siretMeasures[siret] = {
+                        cat,
+                        measures: new Set()
+                    };
+                }
+                siretMeasures[siret].measures.add(measure);
+            }
+        });
+
+        // Calculer le total d'établissements par catégorie d'entreprise (avec au moins 1 mesure)
+        const totalsByCategory: Record<string, number> = {};
+        categories.forEach(cat => {
+            totalsByCategory[cat] = 0;
+        });
+
+        Object.values(siretMeasures).forEach(item => {
+            const numMeasures = item.measures.size;
+            if (numMeasures >= 1 && numMeasures <= 10) {
+                totalsByCategory[item.cat]++;
+            }
+        });
+
+        // Initialiser la distribution de 1 à 10 pour chaque catégorie
+        const dist: Record<string, Record<number, number>> = {};
+        categories.forEach(cat => {
+            dist[cat] = {};
+            for (let i = 1; i <= 10; i++) {
+                dist[cat][i] = 0;
+            }
+        });
+
+        // Remplir la distribution brute
+        Object.values(siretMeasures).forEach(item => {
+            const numMeasures = item.measures.size;
+            if (numMeasures >= 1 && numMeasures <= 10) {
+                if (dist[item.cat]) {
+                    dist[item.cat][numMeasures]++;
+                }
+            }
+        });
+
+        // Formater les données pour Recharts LineChart en PROPORTION (%)
+        const chartData = [];
+        for (let i = 1; i <= 10; i++) {
+            const row: Record<string, any> = { name: `${i} mes.` };
+            categories.forEach(cat => {
+                const total = totalsByCategory[cat] || 0;
+                const count = dist[cat][i] || 0;
+                row[cat] = total > 0 ? parseFloat(((count / total) * 100).toFixed(1)) : 0;
+            });
+            chartData.push(row);
+        }
+
+        return {
+            chartData,
+            categories: Array.from(categories)
+        };
+    }, [filteredAgreements]);
+
 
     // Unique agreements count
     const uniqueAgreementsCount = useMemo(() => {
@@ -1126,15 +1214,21 @@ const Dashboard: React.FC = () => {
                                 </div>
                             </div>
                             
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 <CategoryMeasuresChart 
                                     title="Moyenne et médiane du nombre de mesures IDFM par accord d'entreprise" 
                                     data={categoryMeasuresAvgMedianData} 
                                 />
                                 <CategoryMeasuresDistributionChart
-                                    title="Distribution du nombre de mesures (1 à 10) par catégorie d'entreprise"
+                                    title="Distribution du nombre de mesures (1 à 10) en valeur absolue"
                                     data={categoryMeasuresDistributionData.chartData}
                                     categories={categoryMeasuresDistributionData.categories}
+                                />
+                                <CategoryMeasuresDistributionChart
+                                    title="Distribution du nombre de mesures (1 à 10) en proportion (%)"
+                                    data={categoryMeasuresDistributionPercentData.chartData}
+                                    categories={categoryMeasuresDistributionPercentData.categories}
+                                    isPercent={true}
                                 />
                             </div>
                         </div>

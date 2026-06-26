@@ -6,6 +6,7 @@ interface DistributionChartProps {
     title: string;
     data: any[];
     categories: string[];
+    isPercent?: boolean;
 }
 
 const COLORS: Record<string, string> = {
@@ -16,7 +17,7 @@ const COLORS: Record<string, string> = {
     'Non classifié': '#9CA3AF' // Gris
 };
 
-const CategoryMeasuresDistributionChart: React.FC<DistributionChartProps> = ({ title, data, categories }) => {
+const CategoryMeasuresDistributionChart: React.FC<DistributionChartProps> = ({ title, data, categories, isPercent = false }) => {
     return (
         <ChartCard title={title}>
             <div className="flex-grow flex flex-col justify-between" style={{ minHeight: '320px' }}>
@@ -32,10 +33,13 @@ const CategoryMeasuresDistributionChart: React.FC<DistributionChartProps> = ({ t
                         />
                         <YAxis 
                             tick={{ fontSize: 11, fill: '#6b7280' }}
-                            tickFormatter={(v) => `${v}`}
+                            tickFormatter={(v) => isPercent ? `${v}%` : `${v}`}
                         />
                         <Tooltip
                             cursor={{ strokeDasharray: '3 3' }}
+                            formatter={(value: number, name: string) => {
+                                return isPercent ? [`${value}%`, name] : [value, name];
+                            }}
                             labelStyle={{ fontWeight: 'bold', color: '#111827' }}
                             contentStyle={{ 
                                 backgroundColor: 'rgba(255, 255, 255, 0.95)', 
