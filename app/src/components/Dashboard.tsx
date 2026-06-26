@@ -5,6 +5,7 @@ import DataTable from './DataTable';
 import DonutChart from './charts/DonutChart';
 import CouronneBarChart from './charts/CouronneBarChart';
 import CategoryMeasuresChart from './charts/CategoryMeasuresChart';
+import CategoryMeasuresDistributionChart from './charts/CategoryMeasuresDistributionChart';
 import MapTab from './MapTab';
 import AboutData from './AboutData';
 import AboutDashboard from './AboutDashboard';
@@ -666,6 +667,73 @@ const Dashboard: React.FC = () => {
         return resultsList;
     }, [filteredAgreements]);
 
+    // 8. Distribution du nombre de mesures de 0 à 10 par catégorie d'entreprise
+    const categoryMeasuresDistributionData = useMemo(() => {
+        if (!filteredAgreements || filteredAgreements.length === 0) return { chartData: [], categories: [] };
+
+        const categories = new Set<string>();
+        const siretMeasures: Record<string, { cat: string, measures: Set<string> }> = {};
+
+        filteredAgreements.forEach(a => {
+            const siret = a.SIRET;
+            if (!siret) return;
+
+            let cat = a.categorie_entreprise;
+            if (!cat || cat === 'null' || cat.trim() === '') {
+                cat = 'INDETERMINE';
+            } else {
+                cat = cat.trim();
+            }
+            categories.add(cat);
+
+            const measure = a.mesures_ref_idfm;
+            const isValidMeasure = measure && measure !== 'AUCUNE_CORRESPONDANCE' && measure !== 'hors mesures IDFM';
+
+            if (!siretMeasures[siret]) {
+                siretMeasures[siret] = {
+                    cat,
+                    measures: new Set()
+                };
+            }
+
+            if (isValidMeasure) {
+                siretMeasures[siret].measures.add(measure);
+            }
+        });
+
+        // Initialiser la distribution de 0 à 10 pour chaque catégorie
+        const dist: Record<string, Record<number, number>> = {};
+        categories.forEach(cat => {
+            dist[cat] = {};
+            for (let i = 0; i <= 10; i++) {
+                dist[cat][i] = 0;
+            }
+        });
+
+        // Remplir la distribution
+        Object.values(siretMeasures).forEach(item => {
+            const numMeasures = Math.min(10, item.measures.size); // Plafonné à 10
+            if (dist[item.cat]) {
+                dist[item.cat][numMeasures]++;
+            }
+        });
+
+        // Formater les données pour Recharts LineChart
+        const chartData = [];
+        for (let i = 0; i <= 10; i++) {
+            const row: Record<string, any> = { name: `${i} mes.` };
+            categories.forEach(cat => {
+                row[cat] = dist[cat][i] || 0;
+            });
+            chartData.push(row);
+        }
+
+        return {
+            chartData,
+            categories: Array.from(categories)
+        };
+    }, [filteredAgreements]);
+
 
     // Unique agreements count
     const uniqueAgreementsCount = useMemo(() => {
@@ -1047,10 +1115,17 @@ const Dashboard: React.FC = () => {
                                 </div>
                             </div>
                             
-                            <CategoryMeasuresChart 
-                                title="Moyenne et médiane du nombre de mesures IDFM identifiées par accord" 
-                                data={categoryMeasuresAvgMedianData} 
-                            />
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <CategoryMeasuresChart 
+                                    title="Moyenne et médiane du nombre de mesures IDFM identifiées par accord" 
+                                    data={categoryMeasuresAvgMedianData} 
+                                />
+                                <CategoryMeasuresDistributionChart
+                                    title="Distribution du nombre de mesures (0 à 10) par catégorie d'entreprise"
+                                    data={categoryMeasuresDistributionData.chartData}
+                                    categories={categoryMeasuresDistributionData.categories}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
