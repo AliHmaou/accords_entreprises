@@ -3,8 +3,8 @@ import { Agreement } from '../types';
 import DetailsModal from './DetailsModal';
 import DataTable from './DataTable';
 import DonutChart from './charts/DonutChart';
-import TopMeasuresBarChart from './charts/TopMeasuresBarChart';
 import CouronneBarChart from './charts/CouronneBarChart';
+import CategoryMeasuresChart from './charts/CategoryMeasuresChart';
 import MapTab from './MapTab';
 import AboutData from './AboutData';
 import AboutDashboard from './AboutDashboard';
@@ -600,6 +600,64 @@ const Dashboard: React.FC = () => {
         return results;
     }, [filteredAgreements]);
 
+    // 7. Nombre moyen et médian de mesures distinctes par catégorie d'entreprise (Moyenne & Médiane)
+    const categoryMeasuresAvgMedianData = useMemo(() => {
+        if (!filteredAgreements || filteredAgreements.length === 0) return [];
+
+        const siretData: Record<string, { cat: string, measures: Set<string> }> = {};
+
+        filteredAgreements.forEach(a => {
+            const siret = a.SIRET;
+            if (!siret) return;
+
+            const measure = a.mesures_ref_idfm;
+            const isValidMeasure = measure && measure !== 'AUCUNE_CORRESPONDANCE' && measure !== 'hors mesures IDFM';
+
+            if (!siretData[siret]) {
+                siretData[siret] = {
+                    cat: (a.categorie_entreprise || 'INDETERMINE').trim(),
+                    measures: new Set()
+                };
+            }
+
+            if (isValidMeasure) {
+                siretData[siret].measures.add(measure);
+            }
+        });
+
+        const catMeasures: Record<string, number[]> = {};
+        Object.values(siretData).forEach(item => {
+            if (!catMeasures[item.cat]) {
+                catMeasures[item.cat] = [];
+            }
+            catMeasures[item.cat].push(item.measures.size);
+        });
+
+        const computeMedian = (arr: number[]) => {
+            if (arr.length === 0) return 0;
+            const sorted = [...arr].sort((a, b) => a - b);
+            const half = Math.floor(sorted.length / 2);
+            if (sorted.length % 2 !== 0) {
+                return sorted[half];
+            }
+            return (sorted[half - 1] + sorted[half]) / 2;
+        };
+
+        const resultsList = Object.entries(catMeasures).map(([cat, counts]) => {
+            const sum = counts.reduce((s, c) => s + c, 0);
+            const average = counts.length > 0 ? parseFloat((sum / counts.length).toFixed(2)) : 0;
+            const medianVal = computeMedian(counts);
+
+            return {
+                name: cat,
+                moyenne: average,
+                mediane: medianVal
+            };
+        });
+
+        return resultsList;
+    }, [filteredAgreements]);
+
 
     // Unique agreements count
     const uniqueAgreementsCount = useMemo(() => {
@@ -967,11 +1025,26 @@ const Dashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Autres blocs en dessous */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                         <TopMeasuresBarChart title="Taux d'intégration par catégorie d'entreprise (%)" data={categoryMobilityData} />
-                         <TopMeasuresBarChart title="Top 5 des mesures IDFM détectées" data={top5IDFMData} />
-                    </div>
+                    {/* Quatrième bloc : Nombre moyen et médian de mesures distinctes par catégorie d'entreprise */}
+                    {categoryMeasuresAvgMedianData.length > 0 && (
+                        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-100 dark:border-gray-700">
+                            <div className="mb-6">
+                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                    Nombre moyen et médian de mesures distinctes par catégorie d'entreprise
+                                </h2>
+                                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 border-l-4 border-emerald-500 pl-4 py-1">
+                                    <p className="font-semibold text-gray-800 dark:text-gray-200">
+                                        Moyenne et médiane du nombre de mesures IDFM identifiées par accord selon catégorie de l'entreprise de l'accord.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <CategoryMeasuresChart 
+                                title="Moyenne et médiane du nombre de mesures IDFM identifiées par accord" 
+                                data={categoryMeasuresAvgMedianData} 
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
