@@ -657,17 +657,19 @@ const Dashboard: React.FC = () => {
             return (sorted[half - 1] + sorted[half]) / 2;
         };
 
-        const resultsList = Object.entries(catMeasures).map(([cat, counts]) => {
-            const sum = counts.reduce((s, c) => s + c, 0);
-            const average = counts.length > 0 ? parseFloat((sum / counts.length).toFixed(2)) : 0;
-            const medianVal = computeMedian(counts);
+        const resultsList = Object.entries(catMeasures)
+            .filter(([cat]) => cat !== 'INDETERMINE')
+            .map(([cat, counts]) => {
+                const sum = counts.reduce((s, c) => s + c, 0);
+                const average = counts.length > 0 ? parseFloat((sum / counts.length).toFixed(2)) : 0;
+                const medianVal = computeMedian(counts);
 
-            return {
-                name: cat,
-                moyenne: average,
-                mediane: medianVal
-            };
-        });
+                return {
+                    name: cat,
+                    moyenne: average,
+                    mediane: medianVal
+                };
+            });
 
         return resultsList;
     }, [filteredAgreements]);
@@ -713,6 +715,7 @@ const Dashboard: React.FC = () => {
         // Initialiser la distribution de 1 à 10 pour chaque catégorie (accords avec au moins une mesure)
         const dist: Record<string, Record<number, number>> = {};
         categories.forEach(cat => {
+            if (cat === 'INDETERMINE') return;
             dist[cat] = {};
             for (let i = 1; i <= 10; i++) {
                 dist[cat][i] = 0;
@@ -721,6 +724,7 @@ const Dashboard: React.FC = () => {
 
         // Remplir la distribution
         Object.values(siretMeasures).forEach(item => {
+            if (item.cat === 'INDETERMINE') return;
             const numMeasures = item.measures.size;
             if (numMeasures >= 1 && numMeasures <= 10) {
                 if (dist[item.cat]) {
@@ -734,14 +738,17 @@ const Dashboard: React.FC = () => {
         for (let i = 1; i <= 10; i++) {
             const row: Record<string, any> = { name: `${i} mes.` };
             categories.forEach(cat => {
+                if (cat === 'INDETERMINE') return;
                 row[cat] = dist[cat][i] || 0;
             });
             chartData.push(row);
         }
 
+        const filteredCategories = Array.from(categories).filter(cat => cat !== 'INDETERMINE');
+
         return {
             chartData,
-            categories: Array.from(categories)
+            categories: filteredCategories
         };
     }, [filteredAgreements]);
 
@@ -786,10 +793,12 @@ const Dashboard: React.FC = () => {
         // Calculer le total d'établissements par catégorie d'entreprise (avec au moins 1 mesure)
         const totalsByCategory: Record<string, number> = {};
         categories.forEach(cat => {
+            if (cat === 'INDETERMINE') return;
             totalsByCategory[cat] = 0;
         });
 
         Object.values(siretMeasures).forEach(item => {
+            if (item.cat === 'INDETERMINE') return;
             const numMeasures = item.measures.size;
             if (numMeasures >= 1 && numMeasures <= 10) {
                 totalsByCategory[item.cat]++;
@@ -799,6 +808,7 @@ const Dashboard: React.FC = () => {
         // Initialiser la distribution de 1 à 10 pour chaque catégorie
         const dist: Record<string, Record<number, number>> = {};
         categories.forEach(cat => {
+            if (cat === 'INDETERMINE') return;
             dist[cat] = {};
             for (let i = 1; i <= 10; i++) {
                 dist[cat][i] = 0;
@@ -807,6 +817,7 @@ const Dashboard: React.FC = () => {
 
         // Remplir la distribution brute
         Object.values(siretMeasures).forEach(item => {
+            if (item.cat === 'INDETERMINE') return;
             const numMeasures = item.measures.size;
             if (numMeasures >= 1 && numMeasures <= 10) {
                 if (dist[item.cat]) {
@@ -820,6 +831,7 @@ const Dashboard: React.FC = () => {
         for (let i = 1; i <= 10; i++) {
             const row: Record<string, any> = { name: `${i} mes.` };
             categories.forEach(cat => {
+                if (cat === 'INDETERMINE') return;
                 const total = totalsByCategory[cat] || 0;
                 const count = dist[cat][i] || 0;
                 row[cat] = total > 0 ? parseFloat(((count / total) * 100).toFixed(1)) : 0;
@@ -827,10 +839,41 @@ const Dashboard: React.FC = () => {
             chartData.push(row);
         }
 
+        const filteredCategories = Array.from(categories).filter(cat => cat !== 'INDETERMINE');
+
         return {
             chartData,
-            categories: Array.from(categories)
+            categories: filteredCategories
         };
+    }, [filteredAgreements]);
+
+    // 10. Nombre d'entreprises franciliennes dont la catégorie n'a pu être déterminée
+    const undeterminedIdfEstablishmentsCount = useMemo(() => {
+        if (!filteredAgreements || filteredAgreements.length === 0) return 0;
+
+        const idfAgreements = filteredAgreements.filter(a => {
+            const reg = a.localisation_region_nom || a.localisation_region;
+            return reg === 'Île-de-France';
+        });
+
+        const uniqueSirets = new Set<string>();
+
+        idfAgreements.forEach(a => {
+            const siret = a.SIRET;
+            if (!siret) return;
+
+            const measure = a.mesures_ref_idfm;
+            const isValidMeasure = measure && measure !== 'AUCUNE_CORRESPONDANCE' && measure !== 'hors mesures IDFM';
+
+            if (isValidMeasure) {
+                const cat = a.categorie_entreprise;
+                if (!cat || cat === 'null' || cat.trim() === '') {
+                    uniqueSirets.add(siret);
+                }
+            }
+        });
+
+        return uniqueSirets.size;
     }, [filteredAgreements]);
 
 
