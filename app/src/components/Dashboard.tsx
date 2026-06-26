@@ -613,14 +613,22 @@ const Dashboard: React.FC = () => {
             const measure = a.mesures_ref_idfm;
             const isValidMeasure = measure && measure !== 'AUCUNE_CORRESPONDANCE' && measure !== 'hors mesures IDFM';
 
-            if (!siretData[siret]) {
-                siretData[siret] = {
-                    cat: (a.categorie_entreprise || 'INDETERMINE').trim(),
-                    measures: new Set()
-                };
-            }
-
+            // Si la mesure n'est pas valide, on ne comptabilise pas du tout l'établissement dans la sous-requête (conformément au WHERE de la requête SQL)
             if (isValidMeasure) {
+                let cat = a.categorie_entreprise;
+                if (!cat || cat === 'null' || cat.trim() === '') {
+                    cat = 'INDETERMINE';
+                } else {
+                    cat = cat.trim();
+                }
+
+                if (!siretData[siret]) {
+                    siretData[siret] = {
+                        cat,
+                        measures: new Set()
+                    };
+                }
+
                 siretData[siret].measures.add(measure);
             }
         });
