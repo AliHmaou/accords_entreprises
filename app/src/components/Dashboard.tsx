@@ -324,20 +324,18 @@ const Dashboard: React.FC = () => {
         return ['oui', 'true', '1'].includes(iaVal);
     };
 
-    // 1. Donut : Proportion Globale (Mobilité vs Non Mobilité)
+    // 1. Donut : Proportion Globale (France entière)
     const globalMobilityData = useMemo(() => {
         if (!filteredAgreements || filteredAgreements.length === 0) return [];
         let oui = 0;
         let non = 0;
         
         const processedIds = new Set();
-        // On effectue un double passage : d'abord on trouve tous les ID qui ont au moins un 'OUI'
         const idsWithMobility = new Set();
         filteredAgreements.forEach(a => {
             if (checkMobility(a)) idsWithMobility.add(a.ID);
         });
 
-        // Ensuite on compte de manière unique
         filteredAgreements.forEach(a => {
             if (!processedIds.has(a.ID)) {
                 processedIds.add(a.ID);
@@ -351,12 +349,12 @@ const Dashboard: React.FC = () => {
         
         if (oui === 0 && non === 0) return [];
         return [
-            { name: "Mentionne la mobilité", value: oui, fill: "#10b981" },
-            { name: "Ne mentionne pas la mobilité", value: non, fill: "#9ca3af" }
+            { name: "Mentionne la mobilité", value: oui, fill: "#10B981" },
+            { name: "Ne mentionne pas", value: non, fill: "#E5E7EB" }
         ];
     }, [filteredAgreements]);
 
-    // 2. Donut : Proportion Île-de-France (Mobilité vs Non Mobilité)
+    // 2. Donut : Proportion Île-de-France (IDF)
     const idfMobilityData = useMemo(() => {
         if (!filteredAgreements || filteredAgreements.length === 0) return [];
         let oui = 0;
@@ -382,8 +380,39 @@ const Dashboard: React.FC = () => {
         
         if (oui === 0 && non === 0) return [];
         return [
-            { name: "Mentionne la mobilité (IDF)", value: oui, fill: "#3b82f6" },
-            { name: "Sans mention (IDF)", value: non, fill: "#9ca3af" }
+            { name: "Mentionne la mobilité", value: oui, fill: "#3B82F6" },
+            { name: "Ne mentionne pas", value: non, fill: "#E5E7EB" }
+        ];
+    }, [filteredAgreements]);
+
+    // 3. Donut : Proportion Hors Île-de-France (Hors IDF)
+    const horsIdfMobilityData = useMemo(() => {
+        if (!filteredAgreements || filteredAgreements.length === 0) return [];
+        let oui = 0;
+        let non = 0;
+        
+        const processedIds = new Set();
+        const idsWithMobility = new Set();
+        filteredAgreements.forEach(a => {
+            if (checkMobility(a)) idsWithMobility.add(a.ID);
+        });
+
+        filteredAgreements.forEach(a => {
+            const reg = a.localisation_region_nom || a.localisation_region;
+            if (reg !== 'Île-de-France' && !processedIds.has(a.ID)) {
+                processedIds.add(a.ID);
+                if (idsWithMobility.has(a.ID)) {
+                    oui++;
+                } else {
+                    non++;
+                }
+            }
+        });
+        
+        if (oui === 0 && non === 0) return [];
+        return [
+            { name: "Mentionne la mobilité", value: oui, fill: "#F59E0B" },
+            { name: "Ne mentionne pas", value: non, fill: "#E5E7EB" }
         ];
     }, [filteredAgreements]);
 
@@ -750,16 +779,31 @@ const Dashboard: React.FC = () => {
             <div className="pt-2">
                 {activeTab === 'stats' && (
                     <div className="space-y-8 animate-fade-in">
-                        <div className="mb-4 text-center">
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">Indicateurs clés : Proportion d'accords mentionnant la mobilité</h2>
-                            <p className="text-sm text-gray-500">Calcul basé sur les accords uniques et la confirmation IA.</p>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <DonutChart title="Toutes régions (France entière)" data={globalMobilityData} />
-                            <DonutChart title="Zoom Île-de-France" data={idfMobilityData} />
+                        {/* Premier bloc : Proportion d'accords mentionnant la mobilité */}
+                        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-100 dark:border-gray-700">
+                            <div className="mb-6">
+                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                    Proportion d'accords mentionnant la mobilité
+                                </h2>
+                                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 border-l-4 border-indigo-500 pl-4 py-1">
+                                    <p className="font-semibold text-gray-800 dark:text-gray-200">
+                                        Combien d’accords, sur tous les accords franciliens, évoquent le sujet de la mobilité des salariés ?
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold">Définition :</span> Nombre distinct d’accords (les avenants comptant aussi pour un accord), comprenant au moins un extrait dont on estime qu’il mentionne les mobilités (validé par l'IA).
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            {/* Les 3 Donuts sur la même ligne */}
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <DonutChart title="Région Île-de-France" data={idfMobilityData} />
+                                <DonutChart title="Hors Île-de-France" data={horsIdfMobilityData} />
+                                <DonutChart title="France entière" data={globalMobilityData} />
+                            </div>
                         </div>
 
+                        {/* Autres blocs en dessous */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                              <TopMeasuresBarChart title="Taux d'intégration par catégorie d'entreprise (%)" data={categoryMobilityData} />
                              <TopMeasuresBarChart title="Top 5 des mesures IDFM détectées" data={top5IDFMData} />
