@@ -4,6 +4,7 @@ import DetailsModal from './DetailsModal';
 import DataTable from './DataTable';
 import DonutChart from './charts/DonutChart';
 import TopMeasuresBarChart from './charts/TopMeasuresBarChart';
+import CouronneBarChart from './charts/CouronneBarChart';
 import MapTab from './MapTab';
 import AboutData from './AboutData';
 import AboutDashboard from './AboutDashboard';
@@ -477,6 +478,86 @@ const Dashboard: React.FC = () => {
             .slice(0, 5);
     }, [filteredAgreements]);
 
+    // 5. Taux de mesures par couronne en IDF
+    const couronneMobilityData = useMemo(() => {
+        if (!filteredAgreements || filteredAgreements.length === 0) return [];
+
+        const idfAgreements = filteredAgreements.filter(a => {
+            const reg = a.localisation_region_nom || a.localisation_region;
+            const measure = a.mesures_ref_idfm;
+            return (
+                reg === 'Île-de-France' &&
+                measure &&
+                measure !== 'AUCUNE_CORRESPONDANCE' &&
+                measure !== 'hors mesures IDFM'
+            );
+        });
+
+        if (idfAgreements.length === 0) return [];
+
+        const uniqueAccordsByCouronne: Record<string, Set<string>> = {
+            'PARIS': new Set(),
+            'PC': new Set(),
+            'GC': new Set()
+        };
+
+        const getCouronne = (dep: string) => {
+            if (dep === '75') return 'PARIS';
+            if (['92', '93', '94'].includes(dep)) return 'PC';
+            if (['78', '77', '95', '91'].includes(dep)) return 'GC';
+            return null;
+        };
+
+        idfAgreements.forEach(a => {
+            const depCode = a.localisation_departement_code;
+            const couronne = getCouronne(depCode || '');
+            if (couronne) {
+                uniqueAccordsByCouronne[couronne].add(a.ID);
+            }
+        });
+
+        const totalParis = uniqueAccordsByCouronne['PARIS'].size;
+        const totalPC = uniqueAccordsByCouronne['PC'].size;
+        const totalGC = uniqueAccordsByCouronne['GC'].size;
+
+        const counts: Record<string, { PARIS: Set<string>, PC: Set<string>, GC: Set<string> }> = {};
+
+        idfAgreements.forEach(a => {
+            const measure = a.mesures_ref_idfm;
+            if (!measure) return;
+            const depCode = a.localisation_departement_code;
+            const couronne = getCouronne(depCode || '');
+            if (!couronne) return;
+
+            if (!counts[measure]) {
+                counts[measure] = {
+                    PARIS: new Set(),
+                    PC: new Set(),
+                    GC: new Set()
+                };
+            }
+            counts[measure][couronne].add(a.ID);
+        });
+
+        const data = Object.entries(counts).map(([measure, couronnes]) => {
+            const nbParis = couronnes.PARIS.size;
+            const nbPC = couronnes.PC.size;
+            const nbGC = couronnes.GC.size;
+            const totalMeasure = nbParis + nbPC + nbGC;
+
+            return {
+                name: measure,
+                total: totalMeasure,
+                paris: totalParis > 0 ? Math.round((nbParis / totalParis) * 100) : 0,
+                pc: totalPC > 0 ? Math.round((nbPC / totalPC) * 100) : 0,
+                gc: totalGC > 0 ? Math.round((nbGC / totalGC) * 100) : 0,
+                details: `Paris: ${nbParis}/${totalParis} | PC: ${nbPC}/${totalPC} | GC: ${nbGC}/${totalGC}`
+            };
+        });
+
+        return data.sort((a, b) => b.total - a.total);
+    }, [filteredAgreements]);
+
 
     // Unique agreements count
     const uniqueAgreementsCount = useMemo(() => {
@@ -795,21 +876,39 @@ const Dashboard: React.FC = () => {
                                 </div>
                             </div>
                             
-                            {/* Les 3 Donuts sur la même ligne */}
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <DonutChart title="Région Île-de-France" data={idfMobilityData} />
-                                <DonutChart title="Hors Île-de-France" data={horsIdfMobilityData} />
-                                <DonutChart title="France entière" data={globalMobilityData} />
-                            </div>
-                        </div>
-
-                        {/* Autres blocs en dessous */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                             <TopMeasuresBarChart title="Taux d'intégration par catégorie d'entreprise (%)" data={categoryMobilityData} />
-                             <TopMeasuresBarChart title="Top 5 des mesures IDFM détectées" data={top5IDFMData} />
+                        {/* Les 3 Donuts sur la même ligne */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <DonutChart title="Région Île-de-France" data={idfMobilityData} />
+                            <DonutChart title="Hors Île-de-France" data={horsIdfMobilityData} />
+                            <DonutChart title="France entière" data={globalMobilityData} />
                         </div>
                     </div>
-                )}
+
+                    {/* Deuxième bloc : Répartition des mesures et proportions par couronne */}
+                    {couronneMobilityData.length > 0 && (
+                        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-100 dark:border-gray-700">
+                            <div className="mb-6">
+                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                    Répartition des mesures et proportions par couronne
+                                </h2>
+                                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 border-l-4 border-purple-500 pl-4 py-1">
+                                    <p className="font-semibold text-gray-800 dark:text-gray-200">
+                                        Nombre distinct d'accords dans lesquels une mesure du référentiel IDFM est identifiée, par couronne, avec sa proportion d'intégration.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <CouronneBarChart title="Proportion d'intégration par mesure et par couronne (%)" data={couronneMobilityData} />
+                        </div>
+                    )}
+
+                    {/* Autres blocs en dessous */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                         <TopMeasuresBarChart title="Taux d'intégration par catégorie d'entreprise (%)" data={categoryMobilityData} />
+                         <TopMeasuresBarChart title="Top 5 des mesures IDFM détectées" data={top5IDFMData} />
+                    </div>
+                </div>
+            )}
 
                 {activeTab === 'map' && (
                     <div className="animate-fade-in">
