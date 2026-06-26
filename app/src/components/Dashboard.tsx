@@ -601,13 +601,18 @@ const Dashboard: React.FC = () => {
         return results;
     }, [filteredAgreements]);
 
-    // 7. Nombre moyen et médian de mesures distinctes par catégorie d'entreprise (Moyenne & Médiane)
+    // 7. Nombre moyen et médian de mesures distinctes par catégorie d'entreprise en Île-de-France (Moyenne & Médiane)
     const categoryMeasuresAvgMedianData = useMemo(() => {
         if (!filteredAgreements || filteredAgreements.length === 0) return [];
 
+        const idfAgreements = filteredAgreements.filter(a => {
+            const reg = a.localisation_region_nom || a.localisation_region;
+            return reg === 'Île-de-France';
+        });
+
         const siretData: Record<string, { cat: string, measures: Set<string> }> = {};
 
-        filteredAgreements.forEach(a => {
+        idfAgreements.forEach(a => {
             const siret = a.SIRET;
             if (!siret) return;
 
@@ -667,14 +672,19 @@ const Dashboard: React.FC = () => {
         return resultsList;
     }, [filteredAgreements]);
 
-    // 8. Distribution du nombre de mesures de 0 à 10 par catégorie d'entreprise
+    // 8. Distribution du nombre de mesures de 1 à 10 par catégorie d'entreprise en Île-de-France
     const categoryMeasuresDistributionData = useMemo(() => {
         if (!filteredAgreements || filteredAgreements.length === 0) return { chartData: [], categories: [] };
+
+        const idfAgreements = filteredAgreements.filter(a => {
+            const reg = a.localisation_region_nom || a.localisation_region;
+            return reg === 'Île-de-France';
+        });
 
         const categories = new Set<string>();
         const siretMeasures: Record<string, { cat: string, measures: Set<string> }> = {};
 
-        filteredAgreements.forEach(a => {
+        idfAgreements.forEach(a => {
             const siret = a.SIRET;
             if (!siret) return;
 
@@ -689,38 +699,39 @@ const Dashboard: React.FC = () => {
             const measure = a.mesures_ref_idfm;
             const isValidMeasure = measure && measure !== 'AUCUNE_CORRESPONDANCE' && measure !== 'hors mesures IDFM';
 
-            if (!siretMeasures[siret]) {
-                siretMeasures[siret] = {
-                    cat,
-                    measures: new Set()
-                };
-            }
-
             if (isValidMeasure) {
+                if (!siretMeasures[siret]) {
+                    siretMeasures[siret] = {
+                        cat,
+                        measures: new Set()
+                    };
+                }
                 siretMeasures[siret].measures.add(measure);
             }
         });
 
-        // Initialiser la distribution de 0 à 10 pour chaque catégorie
+        // Initialiser la distribution de 1 à 10 pour chaque catégorie (accords avec au moins une mesure)
         const dist: Record<string, Record<number, number>> = {};
         categories.forEach(cat => {
             dist[cat] = {};
-            for (let i = 0; i <= 10; i++) {
+            for (let i = 1; i <= 10; i++) {
                 dist[cat][i] = 0;
             }
         });
 
         // Remplir la distribution
         Object.values(siretMeasures).forEach(item => {
-            const numMeasures = Math.min(10, item.measures.size); // Plafonné à 10
-            if (dist[item.cat]) {
-                dist[item.cat][numMeasures]++;
+            const numMeasures = item.measures.size;
+            if (numMeasures >= 1 && numMeasures <= 10) {
+                if (dist[item.cat]) {
+                    dist[item.cat][numMeasures]++;
+                }
             }
         });
 
-        // Formater les données pour Recharts LineChart
+        // Formater les données pour Recharts LineChart (1 à 10 mesures)
         const chartData = [];
-        for (let i = 0; i <= 10; i++) {
+        for (let i = 1; i <= 10; i++) {
             const row: Record<string, any> = { name: `${i} mes.` };
             categories.forEach(cat => {
                 row[cat] = dist[cat][i] || 0;
@@ -1101,27 +1112,27 @@ const Dashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Quatrième bloc : Nombre moyen et médian de mesures distinctes par catégorie d'entreprise */}
+                    {/* Quatrième bloc : Nombre moyen et médian de mesures distinctes par catégorie d'entreprise en Île-de-France */}
                     {categoryMeasuresAvgMedianData.length > 0 && (
                         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-100 dark:border-gray-700">
                             <div className="mb-6">
                                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                    Nombre moyen et médian de mesures distinctes par catégorie d'entreprise
+                                    Nombre moyen, médian et distribution des mesures distinctes par catégorie d'entreprise en Île-de-France
                                 </h2>
                                 <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 border-l-4 border-emerald-500 pl-4 py-1">
                                     <p className="font-semibold text-gray-800 dark:text-gray-200">
-                                        Moyenne et médiane du nombre de mesures IDFM identifiées par accord selon catégorie de l'entreprise de l'accord.
+                                        Moyenne, médiane et distribution du nombre de mesures IDFM identifiées par accord d'entreprise présentant au moins une mesure de mobilité en Île-de-France.
                                     </p>
                                 </div>
                             </div>
                             
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 <CategoryMeasuresChart 
-                                    title="Moyenne et médiane du nombre de mesures IDFM identifiées par accord" 
+                                    title="Moyenne et médiane du nombre de mesures IDFM par accord d'entreprise" 
                                     data={categoryMeasuresAvgMedianData} 
                                 />
                                 <CategoryMeasuresDistributionChart
-                                    title="Distribution du nombre de mesures (0 à 10) par catégorie d'entreprise"
+                                    title="Distribution du nombre de mesures (1 à 10) par catégorie d'entreprise"
                                     data={categoryMeasuresDistributionData.chartData}
                                     categories={categoryMeasuresDistributionData.categories}
                                 />
