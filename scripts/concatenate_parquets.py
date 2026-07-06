@@ -13,9 +13,12 @@ def concatenate_and_upload():
     
     outputs_dir = base_dir / "data/outputs"
     
-    # 1. Chercher tous les fichiers finaux générés
+    # 1. Chercher tous les fichiers finaux générés (supporte le dossier organisé par l'utilisateur)
+    backup_dir = outputs_dir / "Backup_run2_2025_2026"
+    search_dir = backup_dir if backup_dir.exists() else outputs_dir
+    
     pattern = "ACCO_MESURES_MOBILITES_*_ENRICHIS.parquet"
-    parquet_files = list(outputs_dir.glob(pattern))
+    parquet_files = list(search_dir.glob(pattern))
     
     if not parquet_files:
         print(f"Aucun fichier trouvé avec le motif {pattern} dans {outputs_dir}.")
@@ -27,6 +30,7 @@ def concatenate_and_upload():
     for f in parquet_files:
         try:
             df = pd.read_parquet(f)
+            df['source_file'] = f.name
             dfs.append(df)
             print(f" - Chargé {f.name} ({len(df)} lignes)")
         except Exception as e:
@@ -50,22 +54,8 @@ def concatenate_and_upload():
     print(f"\n✅ Concaténation réussie : {len(final_df)} lignes au total.")
     print(f"Fichier global sauvegardé sous : {final_path}")
     
-    # 3. Upload vers Hugging Face
-    print("\n--- UPLOAD HUGGING FACE ---")
-    hf_repo = os.getenv("HF_REPO_ID", "alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES")
-    hf_token = os.getenv("HF_TOKEN")
-    
-    if not hf_token:
-        print("Le token Hugging Face (HF_TOKEN) est introuvable dans le .env.")
-        return
-        
-    geo_name = "IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet"
-    success = upload_hf.upload_to_huggingface(str(final_path), hf_repo, hf_token, geo_name)
-    
-    if success:
-        print("Upload du fichier global terminé avec succès !")
-    else:
-        print("L'upload a échoué.")
+    # 3. Upload vers Hugging Face (Désactivé temporairement à la demande de l'utilisateur)
+    print("\n--- UPLOAD HUGGING FACE DESACTIVE POUR LE MOMENT ---")
 
 if __name__ == "__main__":
     concatenate_and_upload()

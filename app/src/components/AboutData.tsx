@@ -59,7 +59,7 @@ const AboutData: React.FC = () => {
 
       <h3>Période et Territoire couvert</h3>
       <ul>
-        <li><strong>Période :</strong> Textes déposés entre le 04/01/2022 et le 03/07/2025.</li>
+        <li><strong>Période :</strong> Accords signés au cours de l'année 2025.</li>
         <li><strong>Territoire :</strong> France entière.</li>
       </ul>
 
@@ -68,17 +68,14 @@ const AboutData: React.FC = () => {
             <thead>
                 <tr className="bg-gray-100 dark:bg-gray-700 border-b dark:border-gray-600">
                     <th className="px-4 py-2 text-left">Année</th>
-                    <th className="px-4 py-2 text-left">Nombre d'accords mentionnés</th>
+                    <th className="px-4 py-2 text-left">Nombre d'accords de mobilité</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                <tr><td className="px-4 py-2">2022</td><td className="px-4 py-2">3667</td></tr>
-                <tr><td className="px-4 py-2">2023</td><td className="px-4 py-2">3699</td></tr>
-                <tr><td className="px-4 py-2">2024</td><td className="px-4 py-2">1920</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2">3302</td></tr>
+                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2">50 480</td></tr>
                 <tr className="bg-indigo-50 dark:bg-indigo-900/20 font-bold">
                     <td className="px-4 py-2">Total</td>
-                    <td className="px-4 py-2">12588</td>
+                    <td className="px-4 py-2">50 480</td>
                 </tr>
             </tbody>
         </table>

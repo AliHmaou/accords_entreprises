@@ -76,12 +76,32 @@ def run():
     parser = argparse.ArgumentParser(description="Pipeline des Accords Professionnels")
     parser.add_argument("--verbose", action="store_true", help="Affiche les prompts et réponses LLM")
     parser.add_argument("--batch-size", type=int, default=5, help="Taille max d'un lot d'extraits pour le LLM")
+    parser.add_argument("--update-referentiels", action="store_true", help="Télécharge et actualise les référentiels SIRENE et Géographiques depuis data.gouv.fr")
+    parser.add_argument("--url-geoloc", type=str, default=None, help="Surcharge l'URL du référentiel de géolocalisation")
+    parser.add_argument("--url-etablissement", type=str, default=None, help="Surcharge l'URL de StockEtablissement")
+    parser.add_argument("--url-unite-legale", type=str, default=None, help="Surcharge l'URL de StockUniteLegale")
     args, unknown = parser.parse_known_args()
     verbose = args.verbose
     batch_size = args.batch_size
 
     # Load .env file
     load_dotenv(Path(__file__).parent.parent / ".env")
+
+    if args.update_referentiels:
+        print("\n--- ACTUALISATION DES RÉFÉRENTIELS ---")
+        sys.path.append(os.path.dirname(__file__))
+        import download_referentiels
+        
+        # Surcharge des URLs si spécifié
+        if args.url_geoloc:
+            download_referentiels.REFERENTIELS["geoloc-geolocalisationetablissement-sirene-pour-etudes-statistiques-parquet.parquet"]["url"] = args.url_geoloc
+        if args.url_etablissement:
+            download_referentiels.REFERENTIELS["StockEtablissement_utf8.parquet"]["url"] = args.url_etablissement
+        if args.url_unite_legale:
+            download_referentiels.REFERENTIELS["StockUniteLegale_utf8.parquet"]["url"] = args.url_unite_legale
+            
+        download_referentiels.main()
+        print("--- FIN DE L'ACTUALISATION DES RÉFÉRENTIELS ---\n")
 
     print("=== DÉMARRAGE DU PIPELINE DES ACCORDS PROFESSIONNELS ===")
 

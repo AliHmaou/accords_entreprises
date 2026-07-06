@@ -23,17 +23,21 @@ def extract_mapping(zip_path: str, output_parquet: str, mode: str):
         zip_ref.extract(xlsx_file, path=os.path.dirname(zip_path))
         extracted_path = os.path.join(os.path.dirname(zip_path), xlsx_file)
 
-    print(f"Lecture du fichier Excel {mode}...")
+    print(f"Lecture du fichier Excel {mode} via Calamine...")
     df = pd.read_excel(
         extracted_path,
         sheet_name="Composition_communale",
-        skiprows=5
+        skiprows=5,
+        engine="calamine"
     )
 
     if mode == "EPT":
         df = df[['CODGEO', 'EPT', 'LIBEPT']]
         df.rename(columns={'CODGEO': 'plg_code_commune'}, inplace=True)
-        df.to_parquet(output_parquet)
+        # Nettoyage des valeurs 'ZZZZZZZZZ' (Sans objet) pour ne garder que les vrais EPT du Grand Paris
+        df['EPT'] = df['EPT'].replace('ZZZZZZZZZ', None)
+        df['LIBEPT'] = df['LIBEPT'].replace('Sans objet', None)
+        df.to_parquet(output_parquet, index=False)
         print(f"Mapping {mode} sauvegardé dans {output_parquet}")
 
     if os.path.exists(extracted_path):
@@ -107,14 +111,16 @@ def enrich_accords_with_geoloc(
         g.localisation_departement_nom,
         g.localisation_epci_id,
         g.localisation_epci_nom,
-        CAST(NULL AS VARCHAR) AS localisation_ept_id,
-        CAST(NULL AS VARCHAR) AS localisation_ept_nom,
+        e.EPT AS localisation_ept_id,
+        e.LIBEPT AS localisation_ept_nom,
         u.categorieEntreprise AS categorie_entreprise
     FROM read_parquet('{accords_parquet}') a
     LEFT JOIN read_parquet('{sirene_url}') s
         ON a.SIRET = s.siret
     LEFT JOIN read_parquet('{geo_ref_parquet}') g
         ON s.plg_code_commune = g.plg_code_commune
+    LEFT JOIN read_parquet('{ept_parquet}') e
+        ON s.plg_code_commune = e.plg_code_commune
     LEFT JOIN read_parquet('{unites_legales_parquet}') u
         ON substr(a.SIRET, 1, 9) = u.siren
     """
@@ -133,15 +139,18 @@ def process_geoloc(accords_in: str, accords_out: str):
 
     ref_csv = base_dir / "data/inputs/referentiels/fr-esr-referentiel-geographique.csv"
     unites_legales_parquet = base_dir / "data/inputs/referentiels/StockUniteLegale_utf8.parquet"
+    ept_zip = base_dir / "data/inputs/referentiels/ept.zip"
     
     geo_ref_parquet = tmp_dir / "geo_referentiel.parquet"
+    ept_parquet = tmp_dir / "ept_mapping.parquet"
 
     build_geo_referentiel(str(ref_csv), str(geo_ref_parquet))
+    extract_mapping(str(ept_zip), str(ept_parquet), "EPT")
 
     enrich_accords_with_geoloc(
         accords_in,
         str(geo_ref_parquet),
-        None,  # Désactivation EPT temporaire
+        str(ept_parquet),
         str(unites_legales_parquet),
         accords_out
     )

@@ -116,6 +116,16 @@ const Dashboard: React.FC = () => {
                 const geoResult = await runQuery(geoQuery);
                 setGeoOptions(geoResult as LocationItem[]);
 
+                // Load Years from DATE_DEPOT using standard extract function
+                const yearsResult = await runQuery(`
+                    SELECT DISTINCT EXTRACT(YEAR FROM DATE_DEPOT) as year 
+                    FROM ${TABLE_NAME} 
+                    WHERE DATE_DEPOT IS NOT NULL 
+                    ORDER BY year DESC
+                `);
+                const yearList = yearsResult.map((r: any) => r.year || r.YEAR).filter(Boolean);
+                setYears(yearList);
+
             } catch (err) {
                 console.error("Erreur initialisation DuckDB:", err);
                 setFileError("Impossible de charger le dataset distant.");
