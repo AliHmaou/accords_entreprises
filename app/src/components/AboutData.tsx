@@ -164,6 +164,16 @@ const AboutData: React.FC = () => {
                 <td className="p-3 italic">Association normalisée à l'une des mesures officielles d'IDFM (ex : Promouvoir le vélo, FMD, etc.).</td>
             </tr>
             <tr>
+                <td className="p-3 font-mono text-indigo-600 font-bold">est_mobilites_durables</td>
+                <td className="p-3 font-semibold text-green-600 dark:text-green-400">Qualifiant Mobilités Durables</td>
+                <td className="p-3 italic">Indicateur déterminant si la mesure s'inscrit spécifiquement dans les mobilités durables (ex : True, False).</td>
+            </tr>
+            <tr>
+                <td className="p-3 font-mono text-indigo-600 font-bold">est_revendication</td>
+                <td className="p-3 font-semibold text-red-600 dark:text-red-400">Indicateur de revendication</td>
+                <td className="p-3 italic">Indique s'il s'agit d'une revendication syndicale ou d'un objectif de négociation, plutôt que d'une mesure d'application d'ores et déjà actée (ex : True, False).</td>
+            </tr>
+            <tr>
                 <td className="p-3 font-mono text-indigo-600">ID</td>
                 <td className="p-3">Identifiant unique</td>
                 <td className="p-3 italic">ACCOTEXT000049122745</td>

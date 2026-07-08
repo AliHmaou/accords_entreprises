@@ -159,6 +159,11 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                 </header>
 
                 <main className="p-6 space-y-5 overflow-y-auto">
+                    {isRevendication && (
+                        <div className="bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-4 rounded text-sm text-red-800 dark:text-red-200">
+                            <strong>📢 Indication de Revendication :</strong> Cet accord ou extrait a été identifié par l'IA comme une <strong>revendication syndicale ou un objectif de négociation</strong>, et non comme une mesure d'application d'ores et déjà actée ou exécutoire.
+                        </div>
+                    )}
                     {/* Key Attributes */}
                     <div className="flex flex-wrap gap-2">
                         {isMentionneIA && (
