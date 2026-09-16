@@ -133,7 +133,7 @@ def enrich_accords_with_geoloc(
 
 
 def process_geoloc(accords_in: str, accords_out: str):
-    base_dir = Path("ACCORDS_PROFESSIONNELS")
+    base_dir = Path(__file__).resolve().parent.parent
     tmp_dir = base_dir / "tmp"
     tmp_dir.mkdir(parents=True, exist_ok=True)
 

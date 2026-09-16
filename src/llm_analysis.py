@@ -77,6 +77,8 @@ Répond EXCLUSIVEMENT en JSON valide selon cette structure :
   "mentionne_mobilite_ia": "Oui ou Non",
   "est_mobilites_durables": "Oui ou Non",
   "est_revendication": "Oui ou Non",
+  "est_superieur_taux_legal": "Oui ou Non",
+  "est_fmd_ikv_mis_en_place": "Oui ou Non",
   "moyens_materiels": ["moyen 1", "moyen 2"],
   "moyens_financiers": ["moyen financier 1", "moyen financier 2"],
   "mesures_ref_idfm": "Libellé exact du référentiel IDFM"
@@ -84,6 +86,8 @@ Répond EXCLUSIVEMENT en JSON valide selon cette structure :
 
 Instructions pour les champs :
 * "est_revendication": Répond "Oui" si l'extrait est formulé comme une demande, une revendication syndicale préalable ou un point à aborder lors des négociations. Répond "Non" s'il s'agit d'une mesure définitivement actée par un accord.
+* "est_superieur_taux_legal": Répond "Oui" si l'accord prévoit un remboursement des abonnements de transports publics à un taux strictement supérieur à l'obligation légale de 50% (ex: 60%, 75%, 100%, ou s'il mentionne explicitement "augmentation de la prise en charge", "revalorisation de la participation de l'employeur", etc.). Répond "Non" si le taux reste à 50%, si aucune augmentation n'est précisée, ou si le sujet des transports publics n'est pas abordé.
+* "est_fmd_ikv_mis_en_place": Répond "Oui" si le texte confirme que l’entreprise met en place ou maintient le Forfait Mobilités Durables (FMD) ou l’Indemnité Kilométrique Vélo (IKV). Si l'accord décide explicitement de ne pas le mettre en place, de l'arrêter, de le suspendre, ou n'en parle pas, répond "Non".
 * "ID": Rappeler l'identifiant du texte.
 * "mesures_proposees": Mesures concrètes proposées concernant les mobilités sous forme d'une liste
   (en 10 mots max par mesure, commençant par un verbe à l'infinitif, un complément d'objet et un
@@ -179,6 +183,8 @@ STRUCTURE DE REPONSE ATTENDUE (Objet JSON strict) :
       "mentionne_mobilite_ia": "Oui ou Non",
       "est_mobilites_durables": "Oui ou Non",
       "est_revendication": "Oui ou Non",
+      "est_superieur_taux_legal": "Oui ou Non",
+      "est_fmd_ikv_mis_en_place": "Oui ou Non",
       "moyens_materiels": ["moyen 1", "moyen 2"],
       "moyens_financiers": ["moyen financier 1", "moyen financier 2"],
       "mesures_ref_idfm": "Libellé exact du référentiel IDFM"
@@ -188,6 +194,8 @@ STRUCTURE DE REPONSE ATTENDUE (Objet JSON strict) :
 
 Instructions pour les champs :
 * "est_revendication": Répond "Oui" si l'extrait est formulé comme une demande, une revendication syndicale préalable ou un point à aborder lors des négociations. Répond "Non" s'il s'agit d'une mesure définitivement actée par un accord.
+* "est_superieur_taux_legal": Répond "Oui" si l'accord prévoit un remboursement des abonnements de transports publics à un taux strictement supérieur à l'obligation légale de 50% (ex: 60%, 75%, 100%, ou s'il mentionne explicitement "augmentation de la prise en charge", "revalorisation de la participation de l'employeur", etc.). Répond "Non" si le taux reste à 50%, si aucune augmentation n'est précisée, ou si le sujet des transports publics n'est pas abordé.
+* "est_fmd_ikv_mis_en_place": Répond "Oui" si le texte confirme que l’entreprise met en place ou maintient le Forfait Mobilités Durables (FMD) ou l’Indemnité Kilométrique Vélo (IKV). Si l'accord décide explicitement de ne pas le mettre en place, de l'arrêter, de le suspendre, ou n'en parle pas, répond "Non".
 * Respecte strictement le format JSON. Echappe correctement les guillemets dans le texte.
 * "chunk_key" et "ID" : Il est impératif de recopier exactement les identifiants fournis dans la balise <extrait>.
 * "mesures_proposees": Mesures concrètes proposées concernant les mobilités sous forme d'une liste
@@ -275,6 +283,8 @@ def _normalize_result(res: dict) -> dict:
     res["est_mobilites_durables"] = str(res.get("est_mobilites_durables", ""))
     res["mentionne_mobilite_ia"] = str(res.get("mentionne_mobilite_ia", ""))
     res["est_revendication"] = str(res.get("est_revendication", ""))
+    res["est_superieur_taux_legal"] = str(res.get("est_superieur_taux_legal", "Non"))
+    res["est_fmd_ikv_mis_en_place"] = str(res.get("est_fmd_ikv_mis_en_place", "Non"))
     res["mesures_ref_idfm"] = str(res.get("mesures_ref_idfm", "hors mesures IDFM"))
     return res
 
@@ -452,6 +462,7 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
     target_columns = [
         "resume_mesure_proposee", "mot_cle_calcule",
         "mentionne_mobilite_ia", "est_mobilites_durables", "est_revendication",
+        "est_superieur_taux_legal", "est_fmd_ikv_mis_en_place",
         "moyens_materiels", "moyens_financiers", "mesures_ref_idfm"
     ]
 

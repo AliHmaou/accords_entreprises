@@ -31,6 +31,8 @@ export interface Agreement {
   mentionne_mobilite_ia?: string; // confirmation IA que l'extrait traite bien de mobilité
   est_mobilites_durables?: string;
   est_revendication?: string;
+  est_superieur_taux_legal?: string;
+  est_fmd_ikv_mis_en_place?: string;
   moyens_materiels?: string;
   moyens_financiers?: string;
   mesures_ref_idfm?: string;      // mesure issue du référentiel IDFM

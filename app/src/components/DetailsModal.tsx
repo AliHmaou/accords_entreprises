@@ -79,6 +79,14 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
     const isRevendicationVal = String(agreement.est_revendication || '').toLowerCase();
     const isRevendication = ['oui', 'true', '1'].includes(isRevendicationVal);
 
+    // Handle est_superieur_taux_legal
+    const superieurTauxLegalVal = String(agreement.est_superieur_taux_legal || '').toLowerCase();
+    const isSuperieurTauxLegal = ['oui', 'true', '1'].includes(superieurTauxLegalVal);
+
+    // Handle est_fmd_ikv_mis_en_place
+    const fmdIkvVal = String(agreement.est_fmd_ikv_mis_en_place || '').toLowerCase();
+    const isFmdIkvEnPlace = ['oui', 'true', '1'].includes(fmdIkvVal);
+
     const getMarkdownContent = (text: string, highlight: string) => {
         if (!text) return { __html: '' };
 
@@ -179,6 +187,16 @@ const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlig
                         {isRevendication && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" title="Il s'agit d'une revendication syndicale ou d'un objectif de négociation, pas d'une mesure actée">
                                 📢 Revendication
+                            </span>
+                        )}
+                        {isSuperieurTauxLegal && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-indigo-800 dark:bg-purple-900/30 dark:text-purple-200" title="L'employeur rembourse les transports publics au-delà des 50% légaux">
+                                ⚡ Prise en charge transports > 50%
+                            </span>
+                        )}
+                        {isFmdIkvEnPlace && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-green-800 dark:bg-emerald-900/30 dark:text-emerald-200" title="Le Forfait Mobilités Durables ou l'indemnité vélo est en place ou va l'être">
+                                🚲 FMD / IKV en place
                             </span>
                         )}
                         {isMobility && (
