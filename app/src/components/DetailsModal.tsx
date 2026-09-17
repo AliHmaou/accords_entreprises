@@ -9,7 +9,7 @@ interface DetailsModalProps {
     highlightTerm: string;
 }
 
-const HighlightedText: React.FC<{ text: string; highlight: string }> = ({ text, highlight }) => {
+const HighlightedText = ({ text, highlight }: { text: string; highlight: string }) => {
     if (!highlight.trim()) {
         return <>{text}</>;
     }
@@ -18,7 +18,7 @@ const HighlightedText: React.FC<{ text: string; highlight: string }> = ({ text, 
     const parts = text.split(regex);
     return (
         <>
-            {parts.map((part, i) =>
+            {parts.map((part: string, i: number) =>
                 regex.test(part) ? <mark key={i} className="bg-yellow-200 dark:bg-yellow-600 rounded px-1 py-0.5">{part}</mark> : <span key={i}>{part}</span>
             )}
         </>
@@ -47,7 +47,7 @@ function formatDate(value: string | number | null | undefined): string {
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-const DetailsModal: React.FC<DetailsModalProps> = ({ agreement, onClose, highlightTerm }) => {
+const DetailsModal = ({ agreement, onClose, highlightTerm }: DetailsModalProps) => {
     // Safely parse moyens_materiels handling version mismatch or missing data
     let moyens: string[] = [];
     try {
