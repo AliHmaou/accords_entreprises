@@ -39,6 +39,9 @@ const Dashboard: React.FC = () => {
     const [showMeasureSuggestions, setShowMeasureSuggestions] = useState(false);
     const [onlyMobiliteIA, setOnlyMobiliteIA] = useState(false);
     const [onlyIDF, setOnlyIDF] = useState(false); 
+    const [ignoreRevendications, setIgnoreRevendications] = useState(false);
+    const [onlyFmdIkv, setOnlyFmdIkv] = useState(false);
+    const [onlyEffortRemboursement, setOnlyEffortRemboursement] = useState(false);
     
     // Sector Chips State
     const [sectors, setSectors] = useState<string[]>([]);
@@ -216,6 +219,21 @@ const Dashboard: React.FC = () => {
                 query += ` AND localisation_region_nom = 'Île-de-France'`;
             }
 
+            // Ignorer revendications
+            if (ignoreRevendications) {
+                query += ` AND lower(CAST(COALESCE(est_revendication, 'Non') AS VARCHAR)) NOT IN ('oui', 'true', '1')`;
+            }
+
+            // Uniquement FMD/IKV en place
+            if (onlyFmdIkv) {
+                query += ` AND lower(CAST(COALESCE(est_fmd_ikv_mis_en_place, 'Non') AS VARCHAR)) IN ('oui', 'true', '1')`;
+            }
+
+            // Uniquement effort de remboursement > 50%
+            if (onlyEffortRemboursement) {
+                query += ` AND lower(CAST(COALESCE(est_superieur_taux_legal, 'Non') AS VARCHAR)) IN ('oui', 'true', '1')`;
+            }
+
             // ID Filter
             if (searchId) {
                 const idTerm = searchId.replace(/'/g, "''").trim().toLowerCase();
@@ -250,7 +268,7 @@ const Dashboard: React.FC = () => {
             isCancelled = true;
             clearTimeout(timer);
         };
-    }, [globalSearch, measureSearch, selectedSectors, selectedLocations, onlyMobiliteIA, onlyIDF, searchId, selectedYear, dbReady]);
+    }, [globalSearch, measureSearch, selectedSectors, selectedLocations, onlyMobiliteIA, onlyIDF, ignoreRevendications, onlyFmdIkv, onlyEffortRemboursement, searchId, selectedYear, dbReady]);
 
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1169,6 +1187,57 @@ const Dashboard: React.FC = () => {
                         </button>
                         <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">
                             Île-de-France
+                        </span>
+                    </div>
+
+                    {/* Ignorer Revendications */}
+                    <div className="flex items-center">
+                        <button 
+                            type="button" 
+                            className={`${ignoreRevendications ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
+                            role="switch"
+                            aria-checked={ignoreRevendications}
+                            onClick={() => setIgnoreRevendications(!ignoreRevendications)}
+                        >
+                            <span className="sr-only">Ignorer les revendications</span>
+                            <span aria-hidden="true" className={`${ignoreRevendications ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
+                        </button>
+                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Exclut les revendications syndicales et objectifs de négociation non actés">
+                            Ignorer revendications
+                        </span>
+                    </div>
+
+                    {/* FMD / IKV en place */}
+                    <div className="flex items-center">
+                        <button 
+                            type="button" 
+                            className={`${onlyFmdIkv ? 'bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500`}
+                            role="switch"
+                            aria-checked={onlyFmdIkv}
+                            onClick={() => setOnlyFmdIkv(!onlyFmdIkv)}
+                        >
+                            <span className="sr-only">Uniquement FMD ou IKV confirmé</span>
+                            <span aria-hidden="true" className={`${onlyFmdIkv ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
+                        </button>
+                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur les accords où le Forfait Mobilités Durables ou l'Indemnité Vélo est mis en place de façon confirmée">
+                            FMD/IKV confirmés
+                        </span>
+                    </div>
+
+                    {/* Effort de remboursement */}
+                    <div className="flex items-center">
+                        <button 
+                            type="button" 
+                            className={`${onlyEffortRemboursement ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500`}
+                            role="switch"
+                            aria-checked={onlyEffortRemboursement}
+                            onClick={() => setOnlyEffortRemboursement(!onlyEffortRemboursement)}
+                        >
+                            <span className="sr-only">Effort remboursement transports</span>
+                            <span aria-hidden="true" className={`${onlyEffortRemboursement ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
+                        </button>
+                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur les accords où le remboursement des transports en commun dépasse l'obligation légale de 50%">
+                            Effort remboursement {">"} 50%
                         </span>
                     </div>
                 </div>
