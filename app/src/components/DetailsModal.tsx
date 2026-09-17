@@ -191,7 +191,7 @@ const DetailsModal = ({ agreement, onClose, highlightTerm }: DetailsModalProps) 
                         )}
                         {isSuperieurTauxLegal && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-indigo-800 dark:bg-purple-900/30 dark:text-purple-200" title="L'employeur rembourse les transports publics au-delà des 50% légaux">
-                                ⚡ Prise en charge transports > 50%
+                                ⚡ Prise en charge transports {">"} 50%
                             </span>
                         )}
                         {isFmdIkvEnPlace && (
