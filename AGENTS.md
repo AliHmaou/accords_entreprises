@@ -3,6 +3,31 @@
 Ce document est le guide de référence technique destiné aux agents d'IA (Cline, etc.) et aux développeurs reprenant le projet **Accords Entreprises (Mobilités)** sur une nouvelle instance d'exécution (ex. conteneur Onyxia / SSP Cloud / VM Linux).
 
 ---
+## 🚨 0. Règles d'Or pour les Agents IA (À LIRE AVANT TOUTE ACTION)
+
+1. **NE JAMAIS SCANNER MINIO OU GITHUB pour les référentiels métier !**
+   Les 2 fichiers de référentiels métier IDFM suivants sont **internes au projet** :
+   - `data/inputs/referentiels/20260318_categories_mots_cles.csv` (mapping catégories / mots-clés, Jalons 1 & 2)
+   - `data/inputs/referentiels/20260507_ref_mesures_idfm.csv` (16 mesures officielles du référentiel IDFM, Jalon 2)
+   👉 **Ces fichiers ne sont présents NI sur Git NI sur le bucket MinIO S3.**
+   👉 **Si ces fichiers sont absents dans `data/inputs/referentiels/`, l'agent DOIT IMMÉDIATEMENT LES DEMANDER À L'HUMAIN QUI L'INVOQUE**, sans perdre de temps ni consommer de requêtes à inspecter le bucket MinIO ou les commits distants.
+
+2. **Référentiels Open Data (Géolocalisation & SIRENE - Jalon 3)** :
+   Ne cherchez pas les liens un par un : exécutez simplement le script dédié :
+   ```bash
+   python scripts/download_referentiels.py
+   ```
+   Ce script télécharge, valide et installe automatiquement les 4 fichiers officiels Open Data (SIRENE géolocalisée Insee, StockUniteLegale Insee, Référentiel ESR MESR, et EPT Insee).
+
+3. **Cold Start (Clonage initial du dépôt)** :
+   Si l'instance démarre dans `/home/onyxia/work` sans le dossier du projet :
+   ```bash
+   git clone https://github.com/AliHmaou/accords_entreprises.git /home/onyxia/work/ACCORDS_PROFESSIONNELS
+   cd /home/onyxia/work/ACCORDS_PROFESSIONNELS
+   ```
+
+---
+
 
 ## 1. 🏗️ Architecture Globale du Projet
 
@@ -45,6 +70,24 @@ Pandoc est indispensable pour le module `src/conversion.py`.
 - **Sur un conteneur Debian/Ubuntu standard** :
   ```bash
   sudo apt-get update && sudo apt-get install -y pandoc
+
+### D. Référentiels d'entrée (`data/inputs/referentiels/`)
+Deux familles de référentiels sont distinguées :
+1. **Les Référentiels Métier IDFM (Confidentiels & Internes)** :
+   - `20260318_categories_mots_cles.csv` (mapping catégories / mots-clés)
+   - `20260507_ref_mesures_idfm.csv` (16 mesures officielles du référentiel IDFM)
+   👉 **À demander obligatoirement à l'humain si absents** (ne sont ni sur MinIO ni sur Git).
+2. **Les Référentiels Open Data (SIRENE & Géo - Publics)** :
+   Téléchargeables en une commande :
+   ```bash
+   python scripts/download_referentiels.py
+   ```
+   Ce script installe les versions les plus récentes (Août/Septembre 2026) :
+   - `geoloc-geolocalisationetablissement-sirene-pour-etudes-statistiques-parquet.parquet` (Insee Data.gouv)
+   - `StockUniteLegale_utf8.parquet` (Insee Data.gouv)
+   - `fr-esr-referentiel-geographique.csv` (MESR)
+   - `ept.zip` (Insee Grand Paris)
+
   ```
 
 ### C. Fichier d'environnement (`.env`)
