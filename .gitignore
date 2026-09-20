@@ -4,4 +4,15 @@ data/
 tmp/
 .env
 __pycache__/
+*.log
+.git_disabled/
+shellenv.sh
+*.parquet
+*.tar.gz
+*.zip
+.DS_Store
+stats/
+tests/*.sql
+
+
 

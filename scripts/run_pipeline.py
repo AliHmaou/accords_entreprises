@@ -80,6 +80,10 @@ def run():
     parser.add_argument("--url-geoloc", type=str, default=None, help="Surcharge l'URL du référentiel de géolocalisation")
     parser.add_argument("--url-etablissement", type=str, default=None, help="Surcharge l'URL de StockEtablissement")
     parser.add_argument("--url-unite-legale", type=str, default=None, help="Surcharge l'URL de StockUniteLegale")
+    parser.add_argument("--archives", type=str, default=None, help="Liste d'archives spécifiques séparées par des virgules (ex: acco_2024_02.tar.gz,acco_2024_03.tar.gz)")
+    parser.add_argument("--year", type=str, default=None, help="Filtre année pour le LLM (ex: 2024, 2025 ou 'all')")
+    parser.add_argument("--skip-upload", action="store_true", help="Ne pas uploader sur Hugging Face")
+    parser.add_argument("--yes", "-y", action="store_true", help="Exécuter automatiquement toutes les étapes sans invite interactive")
     args, unknown = parser.parse_known_args()
     verbose = args.verbose
     batch_size = args.batch_size
@@ -111,100 +115,129 @@ def run():
     kw_csv = base_dir / "data/inputs/referentiels/20260318_categories_mots_cles.csv"
     idfm_csv = base_dir / "data/inputs/referentiels/20260507_ref_mesures_idfm.csv"
 
-    # --- Mode de démarrage ---
-    print("\nMODE DE DÉMARRAGE :")
-    print("  [1] Traiter une archive depuis le début (extraction → upload)")
-    print("  [2] Reprendre depuis un fichier parquet existant (enrichissement → upload)")
-    mode = input("Votre choix (1 ou 2) : ").strip()
+    # --- Mode automatique / non-interactif ---
+    if args.archives or args.yes:
+        if args.archives:
+            archive_names = [a.strip() for a in args.archives.split(',') if a.strip()]
+            archives_to_process = []
+            for name in archive_names:
+                p = archives_dir / name
+                if p.exists():
+                    archives_to_process.append(p)
+                else:
+                    print(f"Erreur : L'archive {name} n'existe pas dans {archives_dir}.")
+                    return
+        else:
+            archives_to_process = list(archives_dir.glob("*.tar.gz")) + list(archives_dir.glob("*.zip"))
 
-    if mode == '2':
-        # Mode reprise : on choisit directement un parquet existant
-        source_parquet = choose_source_parquet(base_dir, "source pour enrichissement")
-        if not source_parquet:
-            print("Aucun fichier sélectionné. Abandon.")
+        if not archives_to_process:
+            print("Aucune archive à traiter.")
             return
 
-        # Nom de sortie basé sur le fichier source
-        stem = source_parquet.stem
-        final_output = source_parquet
-        final_output_enrichi = base_dir / f"data/outputs/{stem}_ENRICHIS.parquet"
+        print(f"\nMode automatique : {len(archives_to_process)} archive(s) sélectionnée(s) : {[p.name for p in archives_to_process]}")
+        do_extract = True
+        do_parse = True
+        do_convert = True
+        do_nlp = True
+        do_llm = True
+        target_year = args.year if args.year else "all"
+        do_enrich = True
+        do_upload = not args.skip_upload
+    else:
+        # --- Mode de démarrage interactif ---
+        print("\nMODE DE DÉMARRAGE :")
+        print("  [1] Traiter une archive depuis le début (extraction → upload)")
+        print("  [2] Reprendre depuis un fichier parquet existant (enrichissement → upload)")
+        mode = input("Votre choix (1 ou 2) : ").strip()
+
+        if mode == '2':
+            # Mode reprise : on choisit directement un parquet existant
+            source_parquet = choose_source_parquet(base_dir, "source pour enrichissement")
+            if not source_parquet:
+                print("Aucun fichier sélectionné. Abandon.")
+                return
+
+            # Nom de sortie basé sur le fichier source
+            stem = source_parquet.stem
+            final_output = source_parquet
+            final_output_enrichi = base_dir / f"data/outputs/{stem}_ENRICHIS.parquet"
+
+            do_enrich = prompt_step("6. Enrichissement géographique (SIRENE, référentiel ESR)")
+            do_upload = prompt_step("7. Uploader le fichier final sur Hugging Face")
+
+            if do_enrich:
+                print("\n--- JALON 3: ENRICHISSEMENT GEOGRAPHIQUE ---")
+                geoloc_epci.process_geoloc(str(final_output), str(final_output_enrichi))
+                print(f"Fichier enrichi : {final_output_enrichi}")
+
+            if do_upload:
+                print("\n--- JALON 4: UPLOAD HUGGING FACE ---")
+                hf_repo = os.getenv(
+                    "HF_REPO_ID", "alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES"
+                )
+                hf_token = os.getenv("HF_TOKEN")
+                if not hf_token:
+                    print("Le token Hugging Face (HF_TOKEN) est introuvable dans le .env.")
+                else:
+                    if final_output.exists():
+                        deduplicate.deduplicate_parquet(str(final_output))
+                        simple_name = "IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES.parquet"
+                        upload_hf.upload_to_huggingface(
+                            str(final_output), hf_repo, hf_token, simple_name
+                        )
+                    if final_output_enrichi.exists():
+                        deduplicate.deduplicate_parquet(str(final_output_enrichi))
+                        geo_name = (
+                            "IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet"
+                        )
+                        upload_hf.upload_to_huggingface(
+                            str(final_output_enrichi), hf_repo, hf_token, geo_name
+                        )
+
+            print("\n=== PIPELINE TERMINÉ AVEC SUCCÈS ===")
+            return
+
+        # --- Mode 1 : traitement complet depuis une archive ---
+        dispo = list(archives_dir.glob("*.tar.gz")) + list(archives_dir.glob("*.zip"))
+        print("\nArchives disponibles dans data/inputs/archives_acco :")
+        for f in dispo:
+            print(f" - {f.name}")
+
+        choix = input(
+            "\nSaisissez le nom exact de l'archive "
+            "(ex: ACCO_test.tar.gz) ou 'all' pour toutes les traiter : "
+        ).strip()
+
+        archives_to_process = []
+        if choix.lower() == 'all':
+            archives_to_process = dispo
+        else:
+            choix_path = archives_dir / choix
+            if choix_path.exists():
+                archives_to_process = [choix_path]
+            else:
+                print(f"Erreur : L'archive {choix} n'existe pas.")
+                return
+
+        if not archives_to_process:
+            print("Aucune archive à traiter.")
+            return
+
+        print(f"\n{len(archives_to_process)} archive(s) sélectionnée(s) pour le traitement.")
+
+        # Choix des étapes pour toutes les archives
+        do_extract = prompt_step("1. Extraction des archives")
+        do_parse = prompt_step("2. Parsing des métadonnées XML")
+        do_convert = prompt_step("3. Conversion Word vers Markdown (Pandoc)")
+        do_nlp = prompt_step("4. Recherche par mots-clés et extraction du contexte (Jalon 1)")
+        do_llm = prompt_step("5. Analyse Sémantique par IA (LLM)")
+
+        target_year = None
+        if do_llm:
+            target_year = get_year_filter()
 
         do_enrich = prompt_step("6. Enrichissement géographique (SIRENE, référentiel ESR)")
-        do_upload = prompt_step("7. Uploader le fichier final sur Hugging Face")
-
-        if do_enrich:
-            print("\n--- JALON 3: ENRICHISSEMENT GEOGRAPHIQUE ---")
-            geoloc_epci.process_geoloc(str(final_output), str(final_output_enrichi))
-            print(f"Fichier enrichi : {final_output_enrichi}")
-
-        if do_upload:
-            print("\n--- JALON 4: UPLOAD HUGGING FACE ---")
-            hf_repo = os.getenv(
-                "HF_REPO_ID", "alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES"
-            )
-            hf_token = os.getenv("HF_TOKEN")
-            if not hf_token:
-                print("Le token Hugging Face (HF_TOKEN) est introuvable dans le .env.")
-            else:
-                if final_output.exists():
-                    deduplicate.deduplicate_parquet(str(final_output))
-                    simple_name = "IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES.parquet"
-                    upload_hf.upload_to_huggingface(
-                        str(final_output), hf_repo, hf_token, simple_name
-                    )
-                if final_output_enrichi.exists():
-                    deduplicate.deduplicate_parquet(str(final_output_enrichi))
-                    geo_name = (
-                        "IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet"
-                    )
-                    upload_hf.upload_to_huggingface(
-                        str(final_output_enrichi), hf_repo, hf_token, geo_name
-                    )
-
-        print("\n=== PIPELINE TERMINÉ AVEC SUCCÈS ===")
-        return
-
-    # --- Mode 1 : traitement complet depuis une archive ---
-    dispo = list(archives_dir.glob("*.tar.gz")) + list(archives_dir.glob("*.zip"))
-    print("\nArchives disponibles dans data/inputs/archives_acco :")
-    for f in dispo:
-        print(f" - {f.name}")
-
-    choix = input(
-        "\nSaisissez le nom exact de l'archive "
-        "(ex: ACCO_test.tar.gz) ou 'all' pour toutes les traiter : "
-    ).strip()
-
-    archives_to_process = []
-    if choix.lower() == 'all':
-        archives_to_process = dispo
-    else:
-        choix_path = archives_dir / choix
-        if choix_path.exists():
-            archives_to_process = [choix_path]
-        else:
-            print(f"Erreur : L'archive {choix} n'existe pas.")
-            return
-
-    if not archives_to_process:
-        print("Aucune archive à traiter.")
-        return
-
-    print(f"\n{len(archives_to_process)} archive(s) sélectionnée(s) pour le traitement.")
-
-    # Choix des étapes pour toutes les archives
-    do_extract = prompt_step("1. Extraction des archives")
-    do_parse = prompt_step("2. Parsing des métadonnées XML")
-    do_convert = prompt_step("3. Conversion Word vers Markdown (Pandoc)")
-    do_nlp = prompt_step("4. Recherche par mots-clés et extraction du contexte (Jalon 1)")
-    do_llm = prompt_step("5. Analyse Sémantique par IA (LLM)")
-
-    target_year = None
-    if do_llm:
-        target_year = get_year_filter()
-
-    do_enrich = prompt_step("6. Enrichissement géographique (SIRENE, référentiel ESR)")
-    do_upload = prompt_step("7. Uploader le fichier final sur Hugging Face (Jalon 4)")
+        do_upload = prompt_step("7. Uploader le fichier final sur Hugging Face (Jalon 4)")
 
     # Boucle sur les archives
     for archive_path in archives_to_process:
@@ -410,14 +443,14 @@ def run():
             except Exception as e:
                 print(f"\nErreur lors de la suppression de {extracted_base} : {e}")
 
-        # Déplacement de l'archive traitée dans le dossier 'done' pour reprise sur incident
+        # Copie de l'archive traitée dans le dossier 'done' pour sauvegarde (sans supprimer l'original)
         done_dir = archive_path.parent / "done"
         done_dir.mkdir(parents=True, exist_ok=True)
         try:
-            shutil.move(str(archive_path), str(done_dir / archive_path.name))
-            print(f"Succès : Archive {archive_path.name} déplacée vers {done_dir}")
+            shutil.copy2(str(archive_path), str(done_dir / archive_path.name))
+            print(f"Succès : Archive {archive_path.name} copiée vers {done_dir}")
         except Exception as e:
-            print(f"Erreur lors du déplacement de {archive_path.name} : {e}")
+            print(f"Erreur lors de la copie de {archive_path.name} : {e}")
 
     print("\n=== PIPELINE TERMINÉ AVEC SUCCÈS ===")
 
