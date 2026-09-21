@@ -3,31 +3,6 @@
 Ce document est le guide de référence technique destiné aux agents d'IA (Cline, etc.) et aux développeurs reprenant le projet **Accords Entreprises (Mobilités)** sur une nouvelle instance d'exécution (ex. conteneur Onyxia / SSP Cloud / VM Linux).
 
 ---
-## 🚨 0. Règles d'Or pour les Agents IA (À LIRE AVANT TOUTE ACTION)
-
-1. **NE JAMAIS SCANNER MINIO OU GITHUB pour les référentiels métier !**
-   Les 2 fichiers de référentiels métier IDFM suivants sont **internes au projet** :
-   - `data/inputs/referentiels/20260318_categories_mots_cles.csv` (mapping catégories / mots-clés, Jalons 1 & 2)
-   - `data/inputs/referentiels/20260507_ref_mesures_idfm.csv` (16 mesures officielles du référentiel IDFM, Jalon 2)
-   👉 **Ces fichiers ne sont présents NI sur Git NI sur le bucket MinIO S3.**
-   👉 **Si ces fichiers sont absents dans `data/inputs/referentiels/`, l'agent DOIT IMMÉDIATEMENT LES DEMANDER À L'HUMAIN QUI L'INVOQUE**, sans perdre de temps ni consommer de requêtes à inspecter le bucket MinIO ou les commits distants.
-
-2. **Référentiels Open Data (Géolocalisation & SIRENE - Jalon 3)** :
-   Ne cherchez pas les liens un par un : exécutez simplement le script dédié :
-   ```bash
-   python scripts/download_referentiels.py
-   ```
-   Ce script télécharge, valide et installe automatiquement les 4 fichiers officiels Open Data (SIRENE géolocalisée Insee, StockUniteLegale Insee, Référentiel ESR MESR, et EPT Insee).
-
-3. **Cold Start (Clonage initial du dépôt)** :
-   Si l'instance démarre dans `/home/onyxia/work` sans le dossier du projet :
-   ```bash
-   git clone https://github.com/AliHmaou/accords_entreprises.git /home/onyxia/work/ACCORDS_PROFESSIONNELS
-   cd /home/onyxia/work/ACCORDS_PROFESSIONNELS
-   ```
-
----
-
 
 ## 1. 🏗️ Architecture Globale du Projet
 
@@ -51,17 +26,31 @@ Il est composé de deux briques complémentaires :
 
 ## 2. ⚡ Initialisation sur une Nouvelle Instance (Cold Start)
 
-Lors du démarrage d'une nouvelle instance (par exemple sur Onyxia), certaines dépendances doivent être initialisées :
+Lors du démarrage d'une nouvelle instance (par exemple sur un conteneur Onyxia / SSP Cloud vierge) :
 
-### A. Dépendances Python
-Installer les paquets nécessaires dans l'environnement Python :
+### A. Cloner le Dépôt GitHub
+Depuis votre espace de travail (`/home/onyxia/work`), cloner le projet sous le nom conventionnel `ACCORDS_PROFESSIONNELS` :
 ```bash
-pip install pandas pyarrow duckdb openai python-dotenv huggingface_hub python-calamine boto3
+cd /home/onyxia/work
+
+# Clonage HTTPS standard
+git clone https://github.com/AliHmaou/accords_entreprises.git ACCORDS_PROFESSIONNELS
+cd ACCORDS_PROFESSIONNELS
+
+# Alternative : Clonage authentifié via Personal Access Token (PAT GitHub)
+git clone https://<VOTRE_GITHUB_TOKEN>@github.com/AliHmaou/accords_entreprises.git ACCORDS_PROFESSIONNELS
+cd ACCORDS_PROFESSIONNELS
 ```
 
-### B. Binaire Pandoc (Conversion docx -> Markdown)
+### B. Dépendances Python
+Installer les paquets nécessaires dans l'environnement Python :
+```bash
+pip install pandas pyarrow duckdb openai python-dotenv huggingface_hub python-calamine boto3 s3fs
+```
+
+### C. Binaire Pandoc (Conversion docx -> Markdown)
 Pandoc est indispensable pour le module `src/conversion.py`.
-- **Sur Onyxia (si Quarto est présent)** :
+- **Sur Onyxia (si Quarto est préinstallé)** :
   ```bash
   sudo ln -sf /usr/local/lib/quarto-1.9.37/bin/tools/x86_64/pandoc /usr/local/bin/pandoc
   hash -r
@@ -70,27 +59,9 @@ Pandoc est indispensable pour le module `src/conversion.py`.
 - **Sur un conteneur Debian/Ubuntu standard** :
   ```bash
   sudo apt-get update && sudo apt-get install -y pandoc
-
-### D. Référentiels d'entrée (`data/inputs/referentiels/`)
-Deux familles de référentiels sont distinguées :
-1. **Les Référentiels Métier IDFM (Confidentiels & Internes)** :
-   - `20260318_categories_mots_cles.csv` (mapping catégories / mots-clés)
-   - `20260507_ref_mesures_idfm.csv` (16 mesures officielles du référentiel IDFM)
-   👉 **À demander obligatoirement à l'humain si absents** (ne sont ni sur MinIO ni sur Git).
-2. **Les Référentiels Open Data (SIRENE & Géo - Publics)** :
-   Téléchargeables en une commande :
-   ```bash
-   python scripts/download_referentiels.py
-   ```
-   Ce script installe les versions les plus récentes (Août/Septembre 2026) :
-   - `geoloc-geolocalisationetablissement-sirene-pour-etudes-statistiques-parquet.parquet` (Insee Data.gouv)
-   - `StockUniteLegale_utf8.parquet` (Insee Data.gouv)
-   - `fr-esr-referentiel-geographique.csv` (MESR)
-   - `ept.zip` (Insee Grand Paris)
-
   ```
 
-### C. Fichier d'environnement (`.env`)
+### D. Fichier d'environnement (`.env`)
 À la racine de `ACCORDS_PROFESSIONNELS/`, créer ou cloner le fichier `.env` avec les accès requis :
 ```ini
 # Modèle LLM (Azure AI Foundry)
@@ -203,17 +174,53 @@ Le script `scripts/correct_and_deduplicate.py` applique une table de corresponda
 | **Transition énergétique** |
 
 Exécuter le redressement :
+
+#### Redresser un fichier unitaire (recommandé après chaque mois traité) :
+```bash
+python scripts/correct_and_deduplicate.py \
+  --input data/outputs/ACCO_MESURES_MOBILITES_acco_2024_02_ENRICHIS.parquet \
+  --output data/outputs/ACCO_MESURES_MOBILITES_acco_2024_02_ENRICHIS_CORRIGES.parquet
+```
+
+#### Redresser le fichier global consolidé :
 ```bash
 python scripts/correct_and_deduplicate.py
 ```
+
 Ce script :
-1. Corrige la colonne `mesures_ref_idfm` selon le mapping officiel.
+1. Corrige la colonne `mesures_ref_idfm` selon le mapping officiel IDFM (évite les fautes de frappe et artefacts d'encodage).
 2. Applique la règle de dédoublonnage métier (`deduplicate_parquet`) : groupe par `ID` + `mesures_ref_idfm`, sélectionne l'extrait de chunk le plus complet et fusionne les thèmes de recherche.
 3. Vérifie par DuckDB qu'aucune scorie ou pattern corrompu ne subsiste.
 
 ---
 
-## 6. 📦 Concaténation Finale & Déploiement Hugging Face
+## 6. ☁️ Sauvegarde & Synchronisation MinIO (`run_gpt_nano`)
+
+Afin de sauvegarder vos résultats et de pouvoir les partager entre différentes instances (ou reprendre le travail d'une instance à l'autre), déposez les fichiers Parquet (bruts, enrichis et corrigés) ainsi que les logs dans le bucket MinIO sous le préfixe dédié :
+`s3://user-alihmaou/dila_acco/run_gpt_nano/`
+
+Exemple de synchronisation en Python :
+```python
+import s3fs, os
+
+fs = s3fs.S3FileSystem(client_kwargs={'endpoint_url': 'https://minio.data-platform-self-service.net/'})
+prefix = 'user-alihmaou/dila_acco/run_gpt_nano'
+
+# Uploader les résultats d'un mois
+for fn in [
+    'ACCO_MESURES_MOBILITES_acco_2024_02.parquet',
+    'ACCO_MESURES_MOBILITES_acco_2024_02_ENRICHIS.parquet',
+    'ACCO_MESURES_MOBILITES_acco_2024_02_ENRICHIS_CORRIGES.parquet'
+]:
+    local_p = f'data/outputs/{fn}'
+    if os.path.exists(local_p):
+        fs.put(local_p, f'{prefix}/{fn}')
+        print(f'Uploadé : {fn}')
+```
+
+---
+
+## 7. 📦 Concaténation Finale & Déploiement Hugging Face
 
 Une fois toutes les archives unitaires traitées, enrichies et redressées :
 
@@ -249,7 +256,7 @@ Le Dashboard React en ligne prend alors automatiquement en compte le nouveau jeu
 
 ---
 
-## 7. 🧹 Bonnes Pratiques & Entretien de l'Espace Disque
+## 8. 🧹 Bonnes Pratiques & Entretien de l'Espace Disque
 
 - **Core Dumps** : Si un processus crash, vérifier la présence d'un fichier `core.XXXX` (qui peut peser ~4.7 Go) à la racine de `/home/onyxia/work` et le supprimer immédiatement (`rm -f /home/onyxia/work/core.*`).
 - **Dossiers temporaires** : Le pipeline nettoie automatiquement `tmp/acco_<archive>` après chaque archive traitée.
