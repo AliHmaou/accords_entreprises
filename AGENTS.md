@@ -3,6 +3,36 @@
 Ce document est le guide de référence technique destiné aux agents d'IA (Cline, etc.) et aux développeurs reprenant le projet **Accords Entreprises (Mobilités)** sur une nouvelle instance d'exécution (ex. conteneur Onyxia / SSP Cloud / VM Linux).
 
 ---
+## 🚨 0. Règles d'Or pour les Agents IA (À LIRE AVANT TOUTE ACTION)
+
+1. **NE JAMAIS SCANNER MINIO OU GITHUB pour les référentiels métier !**
+   Les 2 fichiers de référentiels métier IDFM suivants sont **strictement internes au projet** :
+   - `data/inputs/referentiels/20260318_categories_mots_cles.csv` (mapping catégories / mots-clés, Jalons 1 & 2)
+   - `data/inputs/referentiels/20260507_ref_mesures_idfm.csv` (16 mesures officielles du référentiel IDFM, Jalon 2)
+   👉 **Ces fichiers ne sont présents NI sur Git NI sur le bucket MinIO S3.**
+   👉 **Si ces 2 fichiers sont absents dans `data/inputs/referentiels/`, l'agent DOIT IMMÉDIATEMENT LES DEMANDER À L'HUMAIN QUI L'INVOQUE**, sans perdre de temps ni consommer de requêtes à inspecter récursivement le bucket MinIO ou les commits distants.
+
+2. **Référentiels Open Data (Géolocalisation & SIRENE - Jalon 3)** :
+   Ne cherchez pas manuellement les URLs : exécutez simplement le script dédié :
+   ```bash
+   python scripts/download_referentiels.py
+   ```
+   Ce script télécharge, valide et installe automatiquement les 4 fichiers officiels Open Data (SIRENE géolocalisée Insee, StockUniteLegale Insee, Référentiel ESR MESR, et EPT Insee).
+
+3. **Expiration des Jetons STS MinIO (Durée de validité 24h)** :
+   Sur Onyxia / SSP Cloud, les jetons de session STS (`AWS_SESSION_TOKEN`) expirent après 24 heures. Si une erreur `InvalidAccessKeyId` survient lors d'un accès S3 :
+   👉 **Demandez à l'humain ses credentials MinIO rafraîchis** (disponibles dans l'interface Onyxia sous *Mon compte ➔ Stockage*).
+
+4. **Automatisation Complète du Traitement (Recommandé)** :
+   Pour traiter un ou plusieurs mois de bout en bout (pipeline + corrections + upload MinIO) en une seule commande autonome résiliente :
+   ```bash
+   nohup python3 -u scripts/batch_and_upload.py \
+     --archives acco_2024_06.tar.gz,acco_2024_07.tar.gz \
+     --year all > batch_run_2024_06_07.log 2>&1 &
+   ```
+
+---
+
 
 ## 1. 🏗️ Architecture Globale du Projet
 
@@ -52,7 +82,7 @@ pip install pandas pyarrow duckdb openai python-dotenv huggingface_hub python-ca
 Pandoc est indispensable pour le module `src/conversion.py`.
 - **Sur Onyxia (si Quarto est préinstallé)** :
   ```bash
-  sudo ln -sf /usr/local/lib/quarto-1.9.37/bin/tools/x86_64/pandoc /usr/local/bin/pandoc
+  sudo ln -sf $(ls -d /usr/local/lib/quarto-*/bin/tools/x86_64/pandoc | tail -n 1) /usr/local/bin/pandoc
   hash -r
   pandoc --version
   ```
@@ -85,6 +115,24 @@ HF_REPO_ID=alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES
 ANNEE_FILTRE_DEFAUT=all
 ```
 
+### E. Référentiels d'entrée (`data/inputs/referentiels/`)
+Deux familles de données sont indispensables au fonctionnement du pipeline :
+1. **Les Référentiels Métier IDFM (Internes & Confidentiels)** :
+   - `20260318_categories_mots_cles.csv` (mapping catégories / mots-clés, Jalons 1 & 2)
+   - `20260507_ref_mesures_idfm.csv` (16 mesures officielles du référentiel IDFM, Jalon 2)
+   👉 **À demander obligatoirement à l'humain si absents** (ne sont ni sur MinIO ni sur Git).
+2. **Les Référentiels Open Data (SIRENE & Géo - Publics, Jalon 3)** :
+   Téléchargeables et vérifiés en une seule commande :
+   ```bash
+   python scripts/download_referentiels.py
+   ```
+   Ce script installe les versions officielles vérifiées les plus récentes :
+   - `geoloc-geolocalisationetablissement-sirene-pour-etudes-statistiques-parquet.parquet` (Insee data.gouv)
+   - `StockUniteLegale_utf8.parquet` (Insee data.gouv)
+   - `fr-esr-referentiel-geographique.csv` (MESR)
+   - `ept.zip` (Insee Métropole Grand Paris)
+
+
 ---
 
 ## 3. 📥 Téléchargement des Archives depuis MinIO S3
@@ -107,8 +155,18 @@ python scripts/download_archives_s3.py --month all
 
 ## 4. 🚀 Lancement d'un Run de Traitement (Mode Batch / Background)
 
-### A. Commande recommandée (résiliente aux fermetures de session)
-Pour traiter un ou plusieurs mois en tâche de fond :
+### A. Commande recommandée (Tout-en-un automatique : Pipeline + Redressement + Upload MinIO)
+Pour exécuter l'ensemble de la chaîne de manière autonome et résiliente en tâche de fond (enchaîne pipeline, corrections des libellés IDFM et téléversement vers MinIO) :
+```bash
+cd /home/onyxia/work/ACCORDS_PROFESSIONNELS
+
+nohup python3 -u scripts/batch_and_upload.py \
+  --archives acco_2024_06.tar.gz,acco_2024_07.tar.gz \
+  --year all > batch_run_2024_06_07.log 2>&1 &
+```
+
+### B. Commande alternative (Pipeline unitaire standard sans post-traitement auto)
+Si vous souhaitez exécuter uniquement l'extraction, l'analyse LLM et l'enrichissement géo sans redressement immédiat :
 ```bash
 cd /home/onyxia/work/ACCORDS_PROFESSIONNELS
 
