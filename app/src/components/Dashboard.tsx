@@ -331,23 +331,6 @@ const Dashboard: React.FC = () => {
         reader.readAsText(file);
     };
 
-    // Sector Chips Handlers
-    const addSector = (sector: string) => {
-        if (!selectedSectors.includes(sector)) {
-            setSelectedSectors([...selectedSectors, sector]);
-        }
-        setSectorInput('');
-        setShowSectorSuggestions(false);
-    };
-
-    const removeSector = (sector: string) => {
-        setSelectedSectors(selectedSectors.filter(s => s !== sector));
-    };
-
-    const filteredSectorSuggestions = sectors.filter(s => 
-        s.toLowerCase().includes(sectorInput.toLowerCase()) && !selectedSectors.includes(s)
-    );
-
     // Geo Chips Handlers
     const addLocation = (loc: LocationItem) => {
         // Avoid duplicates
