@@ -194,28 +194,27 @@ Ce script :
 
 ---
 
-## 6. ☁️ Sauvegarde & Synchronisation MinIO (`run_gpt_nano`)
+## 6. ☁️ Sauvegarde & Synchronisation MinIO (`run_qwen_27b` et `run_gpt_nano`)
 
-Afin de sauvegarder vos résultats et de pouvoir les partager entre différentes instances (ou reprendre le travail d'une instance à l'autre), déposez les fichiers Parquet (bruts, enrichis et corrigés) ainsi que les logs dans le bucket MinIO sous le préfixe dédié :
-`s3://user-alihmaou/dila_acco/run_gpt_nano/`
+Afin de sauvegarder vos résultats et de pouvoir les partager entre différentes instances (ou reprendre le travail d'une instance à l'autre), les données sont archivées sur MinIO sous deux répertoires distincts selon le modèle LLM utilisé :
+
+* **`s3://user-alihmaou/dila_acco/run_qwen_27b/`** :
+  * Contient l'ensemble des données **2025 et 2026** (jusqu'au 29 juin 2026) traitées sous **Qwen 27B** (124 fichiers Parquet : 120 unitaires + 4 consolidés, 279 Mo).
+* **`s3://user-alihmaou/dila_acco/run_gpt_nano/`** :
+  * Contient les données **2024** (janvier à mars) traitées sous **GPT-5.4-Nano** (fichiers bruts, enrichis, et enrichis corrigés + logs d'exécution).
 
 Exemple de synchronisation en Python :
 ```python
 import s3fs, os
 
 fs = s3fs.S3FileSystem(client_kwargs={'endpoint_url': 'https://minio.data-platform-self-service.net/'})
-prefix = 'user-alihmaou/dila_acco/run_gpt_nano'
+prefix = 'user-alihmaou/dila_acco/run_qwen_27b'  # ou run_gpt_nano
 
-# Uploader les résultats d'un mois
-for fn in [
-    'ACCO_MESURES_MOBILITES_acco_2024_02.parquet',
-    'ACCO_MESURES_MOBILITES_acco_2024_02_ENRICHIS.parquet',
-    'ACCO_MESURES_MOBILITES_acco_2024_02_ENRICHIS_CORRIGES.parquet'
-]:
-    local_p = f'data/outputs/{fn}'
-    if os.path.exists(local_p):
-        fs.put(local_p, f'{prefix}/{fn}')
-        print(f'Uploadé : {fn}')
+# Uploader les résultats d'un fichier
+local_p = 'data/outputs/mon_fichier.parquet'
+if os.path.exists(local_p):
+    fs.put(local_p, f'{prefix}/{os.path.basename(local_p)}')
+    print('Uploadé avec succès !')
 ```
 
 ---
