@@ -931,6 +931,22 @@ const Dashboard: React.FC = () => {
     }, [filteredAgreements]);
 
 
+    // Unique establishments (SIRET) total count
+    const uniqueEstablishmentsCount = useMemo(() => {
+        const uniqueSirets = new Set(filteredAgreements.map(a => a.SIRET).filter(Boolean));
+        return uniqueSirets.size;
+    }, [filteredAgreements]);
+
+    // Unique establishments with mobility count
+    const establishmentsWithMobilityCount = useMemo(() => {
+        const sirets = new Set();
+        filteredAgreements.forEach(a => {
+            if (checkMobility(a) && a.SIRET) sirets.add(a.SIRET);
+        });
+        return sirets.size;
+    }, [filteredAgreements]);
+
+
     // Unique agreements count
     const uniqueAgreementsCount = useMemo(() => {
         const uniqueIds = new Set(filteredAgreements.map(a => a.ID));
@@ -1279,9 +1295,9 @@ const Dashboard: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex justify-between items-center">
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <span className="text-indigo-600 dark:text-indigo-400">{measuresDetectedCount}</span> mesure(s) détectée(s) dans <span className="text-indigo-600 dark:text-indigo-400">{agreementsWithMobilityCount}</span> accord(s) sur un total de <span className="text-indigo-600 dark:text-indigo-400">{uniqueAgreementsCount}</span> accord(s) analysés.
+                        <span className="text-indigo-600 dark:text-indigo-400 font-bold">{measuresDetectedCount}</span> mesure(s) détectée(s) dans <span className="text-indigo-600 dark:text-indigo-400 font-bold">{agreementsWithMobilityCount}</span> accord(s) (<span className="text-indigo-600 dark:text-indigo-400 font-bold">{establishmentsWithMobilityCount}</span> établissement(s) distincts) sur un total de <span className="text-indigo-600 dark:text-indigo-400 font-bold">{uniqueAgreementsCount}</span> accord(s) analysés (<span className="text-indigo-600 dark:text-indigo-400 font-bold">{uniqueEstablishmentsCount}</span> établissement(s) distincts).
                      </p>
                      
                      <label className="text-sm font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer flex items-center">
