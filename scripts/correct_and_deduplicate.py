@@ -3,6 +3,7 @@ import os
 import argparse
 import duckdb
 import pandas as pd
+import argparse
 
 # Add src to python path to import deduplicate
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -35,7 +36,7 @@ def fix_label(val):
     if 'dispositif' in val_lower or 'financier' in val_lower or 'ployer' in val_lower:
         return "Déployer des dispositifs financiers d’aide à la mobilité"
         
-    if 'engins' in val_lower or 'edpm' in val_lower:
+    if 'engin' in val_lower or 'edpm' in val_lower:
         return "Inclure les engins de déplacements personnels EDPM"
         
     if 'forfait' in val_lower or 'ikv' in val_lower:
@@ -58,6 +59,9 @@ def fix_label(val):
         
     if 'salari' in val_lower:
         return "Prendre en compte la mobilité des salariés"
+
+    if 'telet' in val_lower or 'télét' in val_lower or 'horaire' in val_lower or 'travail' in val_lower:
+        return "Organiser le télétravail et les horaires de travail"
         
     if 'autopartage' in val_lower:
         return "Promouvoir l’autopartage"
@@ -97,18 +101,18 @@ def process_file(input_file: str, output_file: str):
     dir_name = os.path.dirname(output_file)
     if dir_name:
         os.makedirs(dir_name, exist_ok=True)
-    df.to_parquet(output_file)
+    df.to_parquet(output_path)
     
     print("4. Application du dédoublonnage métier...")
     deduplicate_parquet(output_file)
     
-    print("5. Vérification des valeurs distinctes...")
     con = duckdb.connect()
-    distinct_vals = con.execute(f"SELECT DISTINCT mesures_ref_idfm FROM '{output_file}' ORDER BY 1").fetchall()
+    count_final = con.execute(f"SELECT count(*) FROM '{output_path}'").fetchone()[0]
+    distinct_vals = con.execute(f"SELECT DISTINCT mesures_ref_idfm FROM '{output_path}' ORDER BY 1").fetchall()
     
     print("\nValeurs distinctes dans mesures_ref_idfm :")
     for val in distinct_vals:
-        print(f"- {val[0]}")
+        print(f"  - {val[0]}")
         
     has_ko = False
     for val in distinct_vals:
@@ -140,3 +144,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
