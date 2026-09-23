@@ -69,6 +69,12 @@ const LocationIcon = () => (
          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
     </svg>
 );
+const SearchIcon = () => (
+    <svg className="w-4 h-4 text-indigo-500 group-hover:text-indigo-700 dark:text-indigo-400 dark:group-hover:text-indigo-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+    </svg>
+);
+
 
 const DataTable: React.FC<DataTableProps> = ({ 
     agreements, 
@@ -132,7 +138,11 @@ const DataTable: React.FC<DataTableProps> = ({
                                 className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[35%] cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-600"
                                 onClick={() => onSort?.('mesures_ref_idfm')}
                             >
-                                Mesure détectée <SortIndicator field="mesures_ref_idfm" currentField={sortField} order={sortOrder} />
+                                <div className="flex items-center gap-1.5">
+                                    <span>Mesure IDFM</span>
+                                    <SortIndicator field="mesures_ref_idfm" currentField={sortField} order={sortOrder} />
+                                    <span className="text-[10px] font-normal lowercase tracking-normal text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">🔍 cliquable</span>
+                                </div>
                             </th>
                             <th 
                                 scope="col" 
@@ -208,8 +218,17 @@ const DataTable: React.FC<DataTableProps> = ({
                                     </div>
                                 </td>
                                 <td className="px-4 py-3">
-                                     <div className="text-sm font-medium text-gray-900 dark:text-white leading-snug line-clamp-2" title={agreement.mesures_ref_idfm}>
-                                        <HighlightedText text={agreement.mesures_ref_idfm || 'Non catégorisé'} highlight={highlightTerm} />
+                                     <div className="flex items-center justify-between gap-2 group">
+                                         <div className="text-sm font-medium text-gray-900 dark:text-white leading-snug line-clamp-2" title={agreement.mesures_ref_idfm}>
+                                            <HighlightedText text={agreement.mesures_ref_idfm || 'Non catégorisé'} highlight={highlightTerm} />
+                                         </div>
+                                         <span 
+                                             className="flex-shrink-0 inline-flex items-center gap-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 px-1.5 py-1 rounded-md transition-all shadow-xs"
+                                             title="🔍 Cliquer pour afficher les détails complets de l'accord"
+                                         >
+                                             <SearchIcon />
+                                             <span className="hidden xl:inline text-[10px]">Détails</span>
+                                         </span>
                                      </div>
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-sm">

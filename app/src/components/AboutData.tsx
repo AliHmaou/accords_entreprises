@@ -3,66 +3,93 @@ import React from 'react';
 const AboutData: React.FC = () => {
   return (
     <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 prose dark:prose-invert max-w-none">
-      <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-6">Documentation du jeu de données des Accords d'Entreprise sur la Mobilité Durable (Vision 2025)</h2>
+      <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-6">Documentation du jeu de données des Accords d'Entreprise sur la Mobilité Durable (Vision Consolidée 2024-2026)</h2>
       
       <h3>1. Description fonctionnelle du fichier</h3>
       <p>
-        Ce jeu de données est issu du traitement et de l'enrichissement de la base <strong>ACCO</strong> (accords d'entreprises) publiée par la DILA en open data (accessible à l'adresse suivante : <a href="https://echanges.dila.gouv.fr/OPENDATA/ACCO/" target="_blank" rel="noreferrer">Index Open Data de la DILA ACCO</a>). 
+        Ce jeu de données est issu du traitement et de l'enrichissement de la base <strong>ACCO</strong> (accords collectifs d'entreprises) publiée par la DILA en open data (accessible à l'adresse suivante : <a href="https://echanges.dila.gouv.fr/OPENDATA/ACCO/" target="_blank" rel="noreferrer">Index Open Data de la DILA ACCO</a>). 
       </p>
       <p>
-        Pour répondre aux besoins d'analyse d'<strong>Île-de-France Mobilités (IDFM)</strong>, un pipeline a été mis en place pour identifier dans ces accords lesquels abordent la thématique des mobilités et quelles mesures y sont abordées.
+        Pour répondre aux besoins d'analyse d'<strong>Île-de-France Mobilités (IDFM)</strong>, un pipeline complet a été mis en place pour identifier dans ces accords lesquels abordent la thématique des mobilités durables et quelles mesures concrètes y sont actées.
       </p>
       <p>
-        Le traitement combine un filtrage sur la base de mots-clés combiné à une analyse par Intelligence Artificielle (LLM) pour extraire, catégoriser et géolocaliser les mesures en lien avec les mobilités.
+        Le traitement combine un filtrage sémantique sur la base de mots-clés métiers (Jalon 1), une analyse approfondie par Intelligence Artificielle (Jalon 2, via Azure AI Foundry avec <code>gpt-5.4-nano</code> et <code>qwen/qwen3.8-27b</code>), un enrichissement géographique SIRENE / EPCI / EPT (Jalon 3 via DuckDB), et un dédoublonnage métier rigoureux.
       </p>
 
-      <p className="bg-amber-50 dark:bg-amber-950/20 p-4 border-l-4 border-amber-500 rounded-r-lg my-4">
-        ⚠️ <strong>Note sur la version actuelle :</strong> Ce dataset représente la <strong>Vision 2025 en <u>date de texte</u></strong>, filtrée sur les accords signés au cours de l'année 2025 dont la publication s'est étalée sur 2025 et 2026.
-      </p>
+      <div className="bg-emerald-50 dark:bg-emerald-950/20 p-4 border-l-4 border-emerald-500 rounded-r-lg my-4">
+        ✨ <strong>Couverture multi-annuelle :</strong> Ce dataset consolide désormais l'ensemble de l'année <strong>2024 complète (janvier à décembre)</strong> ainsi que les accords de <strong>2025 et 2026</strong> (plus les accords pluriannuels antérieurs toujours en vigueur).
+      </div>
 
       <hr className="my-6 border-gray-200 dark:border-gray-700"/>
 
-      <h3>2. Enrichissements opérés sur les données</h3>
+      <h3>2. Deux jeux de données disponibles au téléchargement</h3>
+      <p>
+        Pour concilier rapidité de navigation et exhaustivité nationale, deux fichiers Parquet officiels sont hébergés et synchronisés sur Hugging Face :
+      </p>
+      <div className="flex flex-col sm:flex-row gap-4 my-4">
+          <a 
+              href="https://huggingface.co/datasets/alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES/resolve/main/IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION_IDF.parquet" 
+              target="_blank" 
+              rel="noreferrer"
+              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 no-underline"
+          >
+              <svg className="mr-2 -ml-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              Dataset Île-de-France (14.6 Mo - 32k accords)
+          </a>
+          <a 
+              href="https://huggingface.co/datasets/alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES/resolve/main/IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet" 
+              target="_blank" 
+              rel="noreferrer"
+              className="inline-flex items-center justify-center px-4 py-2 border border-slate-300 dark:border-slate-600 text-sm font-medium rounded-md shadow-sm text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none no-underline"
+          >
+              <svg className="mr-2 -ml-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              Dataset France Entière (82.7 Mo - 123k accords)
+          </a>
+      </div>
+
+      <hr className="my-6 border-gray-200 dark:border-gray-700"/>
+
+      <h3>3. Enrichissements et nouveaux indicateurs</h3>
 
       <h4>🎯 A. Classification selon le Référentiel IDFM (<code>mesures_ref_idfm</code>)</h4>
       <p>
-        Chaque accord identifié comme traitant de la mobilité est associé à une ou plusieurs mesures d'une nomenclature établie par IDFM. Cette catégorisation permet d'évaluer si des mesures ont été abordées et tracées dans les accords. 
-        Le référentiel des mesures utilisé est le suivant :
+        Chaque accord identifié comme traitant de la mobilité est associé à une ou plusieurs des 16 mesures de la nomenclature officielle IDFM :
       </p>
       <ul>
-        <li><strong>Mobilités actives :</strong> <em>Promouvoir le vélo</em>, <em>Organiser le stationnement des véhicules et des vélos</em>, <em>Encourager la marche</em>.</li>
+        <li><strong>Mobilités actives & partagées :</strong> <em>Promouvoir le vélo</em>, <em>Organiser le stationnement des véhicules et des vélos</em>, <em>Encourager la marche</em>, <em>Inclure les engins de déplacements personnels EDPM</em>, <em>Promouvoir le covoiturage</em>, <em>Promouvoir l’autopartage</em>.</li>
         <li><strong>Accompagnement financier :</strong> <em>Mettre en place le forfait mobilité durable et l'indemnité kilométrique vélo IKV</em>, <em>Rembourser les transports en commun</em>, <em>Déployer des dispositifs financiers d’aide à la mobilité</em>.</li>
-        <li><strong>Nouvelles organisations du travail :</strong> <em>Organiser le télétravail et les horaires de travail</em>, <em>Mettre en place un plan de mobilité employeur</em>.</li>
-        <li><strong>Transition énergétique :</strong> <em>Soutenir la transition énergétique du parc de véhicules de l’entreprise</em>, <em>Promouvoir le covoiturage / l'autopartage</em>.</li>
+        <li><strong>Organisation du travail & plans d'entreprise :</strong> <em>Organiser le télétravail et les horaires de travail</em>, <em>Mettre en place un plan de mobilité employeur</em>, <em>Prendre en compte la mobilité des salariés</em>.</li>
+        <li><strong>Flottes & Transition énergétique :</strong> <em>Soutenir la transition énergétique du parc de véhicules de l’entreprise</em>, <em>Transition énergétique</em>, <em>Organiser l’usage de la voiture et des deux-roues motorisés</em>, <em>Améliorer la sécurité routière</em>.</li>
       </ul>
 
-      <h4>🏢 B. Données SIRENE et rattachement au Territoire (INSEE / EPCI / EPT)</h4>
-      <p>
-        Le pipeline interroge d'abord la base de données nationale <strong>SIRENE</strong> de l'INSEE pour en extraire les informations de structure de l'entreprise :
-      </p>
+      <h4>✨ B. Nouveaux Indicateurs Avancés</h4>
       <ul>
-        <li><strong>La taille / catégorie de l'entreprise</strong> (<code>entreprise_categorie_taille</code>) : qualification des structures en PME, ETI ou GE.</li>
-        <li><strong>L'activité principale exercée</strong> (<code>entreprise_code_ape</code>) : Code APE officiel.</li>
-        <li><strong>Le secteur d'activité</strong> (<code>entreprise_secteur</code>) : Secteur macro-économique d'activité de l'entreprise.</li>
-      </ul>
-      <p>
-        Le dataset est enrichi géographiquement grâce à un croisement avec la base nationale <strong>SIRENE</strong> (INSEE) et le référentiel ESR :
-      </p>
-      <ul>
-        <li><strong>Coordonnées géographiques :</strong> Latitude et Longitude de l'établissement pour la cartographie.</li>
-        <li><strong>Rattachement Intercommunal (EPCI) :</strong> Identification de la communauté de communes, d'agglomération ou de la métropole de l'établissement.</li>
-        <li><strong>Gouvernance Île-de-France (EPT) :</strong> Pour la Métropole du Grand Paris, croisement avec le référentiel de composition communale 2026 pour associer l'accord à l'un des 12 <strong>Établissements Publics Territoriaux (T1 à T12)</strong> (ex : <em>Vallée Sud-Grand Paris</em>, <em>Grand-Orly Seine Bièvre</em>, <em>Plaine Commune</em>, etc.).</li>
+        <li><strong>Dépassement du taux légal de remboursement (<code>est_superieur_taux_legal</code>) :</strong> Isole les accords d'entreprise prévoyant un remboursement des transports publics supérieur à l'obligation légale de 50% (ex: 60%, 75%, 100% ou revalorisation explicite de la prise en charge employeur).</li>
+        <li><strong>FMD / IKV confirmé (<code>est_fmd_ikv_mis_en_place</code>) :</strong> Confirme la mise en place ou le maintien effectif du Forfait Mobilités Durables ou de l'Indemnité Kilométrique Vélo (exclut les refus ou reports de mise en place).</li>
+        <li><strong>Filtrage des revendications (<code>est_revendication</code>) :</strong> Distingue une mesure actée définitivement par accord d'une simple demande syndicale préalable ou d'un point à aborder lors des négociations.</li>
       </ul>
 
-      <h4>🕵️ C. Traçabilité d'Audit (<code>source_file</code>)</h4>
+      <h4>🏢 C. Données SIRENE et rattachement au Territoire (INSEE / EPCI / EPT)</h4>
       <p>
-        Pour garantir l'intégrité et la transparence des données, chaque ligne intègre la colonne <code>source_file</code> qui documente l'archive d'origine d'où provient l'accord.
-      </p>
-      <p>
-        Pour ce qui concerne les accords provenant du fichier historique, des zips intermédiaires mensuels ont été créés pour le traitement. Ils suivent la convention de nommage standardisée suivante :
+        Le pipeline interroge la base de données <strong>SIRENE géolocalisée</strong> de l'INSEE, le <strong>référentiel géographique du MESR</strong> ainsi que le fichier officiel de composition communale des <strong>Établissements Publics Territoriaux (EPT)</strong> du Grand Paris :
       </p>
       <ul>
-        <li><strong><code>acco_2025_MM.tar.gz</code></strong> (ex : <code>acco_2025_01.tar.gz</code> à <code>acco_2025_07.tar.gz</code>).</li>
+        <li><strong>La taille / catégorie de l'entreprise</strong> (<code>categorie_entreprise</code>) : PME, ETI ou GE.</li>
+        <li><strong>Le secteur d'activité</strong> (<code>SECTEUR</code>) et Code APE (<code>CODE_APE</code>).</li>
+        <li><strong>Rattachement territorial complet :</strong> Commune, EPCI, EPT francilien (T1 à T12), Département et Région.</li>
+      </ul>
+
+      <hr className="my-6 border-gray-200 dark:border-gray-700"/>
+
+      <h3>4. Période et Volume des données (Consolidé 2024-2026)</h3>
+      <p>
+        Le jeu de données consolide <strong>123 431 lignes</strong> issues de <strong>96 967 accords d'entreprise uniques</strong> et <strong>39 181 établissements employeurs</strong> (SIRET).
+      </p>
+      <ul>
+        <li><strong>Année 2024 :</strong> 51 703 lignes (12 mois complets de janvier à décembre)</li>
+        <li><strong>Année 2025 :</strong> 53 758 lignes</li>
+        <li><strong>Année 2026 :</strong> 15 933 lignes (première moitié d'année)</li>
+        <li><strong>Accords antérieurs :</strong> 2 037 lignes (accords pluriannuels en vigueur)</li>
       </ul>
       <p>
         Pour les publications hebdomadaires, c'est le nom de l'export d'origine qui est documenté :
@@ -173,6 +200,17 @@ const AboutData: React.FC = () => {
                 <td className="p-3 font-semibold text-red-600 dark:text-red-400">Indicateur de revendication</td>
                 <td className="p-3 italic">Indique s'il s'agit d'une revendication syndicale ou d'un objectif de négociation, plutôt que d'une mesure d'application d'ores et déjà actée (ex : True, False).</td>
             </tr>
+            <tr>
+                <td className="p-3 font-mono text-indigo-600 font-bold">est_superieur_taux_legal</td>
+                <td className="p-3 font-semibold text-purple-600 dark:text-purple-400">Prise en charge transports &gt; 50%</td>
+                <td className="p-3 italic">Indique si l'accord prévoit une prise en charge des abonnements de transports publics strictement supérieure à l'obligation légale de 50% (ex : 60%, 75%, 100%, revalorisation) (Oui, Non).</td>
+            </tr>
+            <tr>
+                <td className="p-3 font-mono text-indigo-600 font-bold">est_fmd_ikv_mis_en_place</td>
+                <td className="p-3 font-semibold text-emerald-600 dark:text-emerald-400">Forfait Mobilité Durable / IKV acté</td>
+                <td className="p-3 italic">Confirme que l'entreprise met en place ou maintient le Forfait Mobilités Durables ou l'Indemnité Kilométrique Vélo (Oui, Non).</td>
+            </tr>
+
             <tr>
                 <td className="p-3 font-mono text-indigo-600">ID</td>
                 <td className="p-3">Identifiant unique</td>

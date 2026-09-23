@@ -1,5 +1,28 @@
 
 import { Agreement } from './types';
+export const HF_PARQUET_URL_IDF = "https://huggingface.co/datasets/alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES/resolve/main/IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION_IDF.parquet";
+export const HF_PARQUET_URL_FRANCE = "https://huggingface.co/datasets/alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES/resolve/main/IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet";
+
+export const IDFM_OFFICIAL_MEASURES = [
+    "Améliorer la sécurité routière",
+    "Déployer des dispositifs financiers d’aide à la mobilité",
+    "Encourager la marche",
+    "Inclure les engins de déplacements personnels EDPM",
+    "Mettre en place le forfait mobilité durable et l'indemnité kilométrique vélo IKV",
+    "Mettre en place un plan de mobilité employeur",
+    "Organiser le stationnement des véhicules et des vélos",
+    "Organiser le télétravail et les horaires de travail",
+    "Organiser l’usage de la voiture et des deux-roues motorisés",
+    "Prendre en compte la mobilité des salariés",
+    "Promouvoir l’autopartage",
+    "Promouvoir le covoiturage",
+    "Promouvoir le vélo",
+    "Rembourser les transports en commun",
+    "Soutenir la transition énergétique du parc de véhicules de l’entreprise",
+    "Transition énergétique",
+    "Utiliser les transports en commun"
+];
+
 
 const rawData = `
 {"url_legifrance":"https://www.legifrance.gouv.fr/acco/id/ACCOTEXT000045063784","mesure_extraite":"Prise en charge des abonnements de transports publics","ID":"ACCOTEXT000045063784","RAISON_SOCIALE":"MARCOULY","SIRET":"30502462200014","TITRE_TXT":"ACCORD RELATIF A L'EGALITE PROFESSIONNELLE ENTRE LES HOMMES ET LES FEMMES ET LA QUALITE DE VIE AU TRAVAIL","DATE_DEPOT":"2022-01-19","DATE_TEXTE":"2022-01-14","DATE_EFFET":"2022-01-01","DATE_FIN":"2024-12-31","CODE_APE":"4211Z","SECTEUR":"Construction de routes et autoroutes","SYNDICATS":"CFDT","DOCUMENT_BUREAUTIQUE":"/2022/01/14/T04622000796-30502462200014.docx","NUMERO":"T04622000796","theme_recherche":"transports publics","fichier_markdown":"20220114-T04622000796-30502462200014.md","extrait_chunk":"Les informations utiles seront en outre transmises à tous les services et unités de travail concernées par les sujets traités. **[Article 10 -- Encourager les mobilités douces]{.underline}**  En application de la loi n° 2019-1428 du 24 décembre 2019 relative à l'orientation des mobilités, l'entreprise s'engage à promouvoir l'utilisation des modes de transports vertueux pour les trajets domicile-lieu de travail par le biais de cinq actions :  -   *Maintien de la participation aux abonnements de transports publics*  Il est convenu de maintenir à hauteur de 50 % la prise en charge par l'Entreprise du titre d'abonnement de transport urbain et régional souscrit par le salarié pour les trajets entre sa résidence habituelle et son lieu de travail. Cette prise en charge concerne également les abonnements de service public de locations de vélos de type Vélib, Vélo'V, etc.","est_mobilites_durables_v2":"true","moyens_materiels_v2":"[\\"Vélos de type Vélib\\"]"}

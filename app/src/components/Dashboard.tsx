@@ -12,8 +12,12 @@ import AboutDashboard from './AboutDashboard';
 import LiveSQL from './LiveSQL';
 import { initDuckDB, loadParquetFile, loadJsonJSONL, runQuery } from '../duckdbClient';
 
-// Updated URL for the new enriched dataset
-const PARQUET_URL = import.meta.env.VITE_HF_PARQUET_URL || "https://huggingface.co/datasets/alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES/resolve/main/IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet";
+import { 
+    HF_PARQUET_URL_IDF, 
+    HF_PARQUET_URL_FRANCE, 
+    IDFM_OFFICIAL_MEASURES 
+} from '../constants';
+
 const TABLE_NAME = "agreements";
 const ITEMS_PER_PAGE = 20;
 
@@ -30,24 +34,25 @@ const Dashboard: React.FC = () => {
     const [filteredAgreements, setFilteredAgreements] = useState<Agreement[]>([]);
     const [selectedAgreement, setSelectedAgreement] = useState<Agreement | null>(null);
     
+    // Dataset Scope State (par défaut IDF pour un démarrage ultra-rapide)
+    const [datasetScope, setDatasetScope] = useState<'IDF' | 'FRANCE'>('IDF');
+    
     // Tab State
     const [activeTab, setActiveTab] = useState<TabType>('stats');
 
     // Search States
     const [globalSearch, setGlobalSearch] = useState('');
     const [measureSearch, setMeasureSearch] = useState('');
-    const [showMeasureSuggestions, setShowMeasureSuggestions] = useState(false);
+    const [availableMeasures, setAvailableMeasures] = useState<string[]>(IDFM_OFFICIAL_MEASURES);
     const [onlyMobiliteIA, setOnlyMobiliteIA] = useState(false);
     const [onlyIDF, setOnlyIDF] = useState(false); 
     const [ignoreRevendications, setIgnoreRevendications] = useState(false);
     const [onlyFmdIkv, setOnlyFmdIkv] = useState(false);
     const [onlyEffortRemboursement, setOnlyEffortRemboursement] = useState(false);
     
-    // Sector Chips State
+    // Sector State
     const [sectors, setSectors] = useState<string[]>([]);
     const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
-    const [sectorInput, setSectorInput] = useState('');
-    const [showSectorSuggestions, setShowSectorSuggestions] = useState(false);
 
     // Geographic Filter State
     const [geoOptions, setGeoOptions] = useState<LocationItem[]>([]);
@@ -71,64 +76,79 @@ const Dashboard: React.FC = () => {
     const [sortField, setSortField] = useState<string>('DATE_DEPOT');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-    const sectorWrapperRef = useRef<HTMLDivElement>(null);
     const geoWrapperRef = useRef<HTMLDivElement>(null);
-    const measureWrapperRef = useRef<HTMLDivElement>(null);
 
-    const IDFM_MEASURES = [
-        "Utiliser les transports en commun",
-        "Organiser le télétravail et les horaires de travail",
-        "Promouvoir le vélo",
-        "Encourager la marche",
-        "Inclure les EDP",
-        "Promouvoir l’autopartage",
-        "Promouvoir le covoiturage",
-        "Organiser le stationnement des véhicules et des vélos",
-        "Rembourser les transports en commun",
-        "Organiser l’usage de la voiture et des deux-roues motorisés",
-        "Améliorer la sécurité routière",
-        "Mettre en place le forfait mobilité durable et l’IKV (indemnité kilométrique vélo)",
-        "Soutenir la transition énergétique du parc de véhicules de l’entreprise",
-        "Déployer des dispositifs financiers d’aide à la mobilité",
-        "Prendre en compte la mobilité des salariés",
-        "Mettre en place un plan de mobilité employeur"
-    ];
+    const IDFM_MEASURES = availableMeasures;
 
-    // 1. Initialize DuckDB & Load Data + Geo Options
+    // Fonction réutilisable pour alimenter les listes déroulantes de filtres depuis DuckDB
+    const loadOptionsFromDB = async () => {
+        // 1. Secteurs d'activité
+        const sectorResult = await runQuery(`SELECT DISTINCT SECTEUR FROM ${TABLE_NAME} WHERE SECTEUR IS NOT NULL ORDER BY SECTEUR`);
+        const sectorList = sectorResult.map((r: any) => r.SECTEUR).filter(Boolean);
+        setSectors(sectorList);
+
+        // 2. Options géographiques (Régions, EPCI)
+        const geoQuery = `
+            SELECT DISTINCT localisation_region_nom as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region_nom IS NOT NULL
+            UNION
+            SELECT DISTINCT localisation_epci_nom as name, 'EPCI' as type FROM ${TABLE_NAME} WHERE localisation_epci_nom IS NOT NULL
+            ORDER BY name
+        `;
+        const geoResult = await runQuery(geoQuery);
+        setGeoOptions(geoResult as LocationItem[]);
+
+        // 3. Années de signature issues de DATE_TEXTE
+        const yearsResult = await runQuery(`
+            SELECT DISTINCT EXTRACT(YEAR FROM CAST(DATE_TEXTE AS DATE)) as year 
+            FROM ${TABLE_NAME} 
+            WHERE DATE_TEXTE IS NOT NULL 
+              AND EXTRACT(YEAR FROM CAST(DATE_TEXTE AS DATE)) >= 2018
+            ORDER BY year DESC
+        `);
+        const yearList = yearsResult.map((r: any) => r.year || r.YEAR).filter((y: any) => Boolean(y) && !isNaN(y));
+        setYears(yearList);
+
+        // 4. Mesures IDFM distinctes réelles du jeu de données
+        const measuresResult = await runQuery(`
+            SELECT DISTINCT mesures_ref_idfm 
+            FROM ${TABLE_NAME} 
+            WHERE mesures_ref_idfm IS NOT NULL 
+              AND mesures_ref_idfm NOT IN ('AUCUNE_CORRESPONDANCE', 'hors mesures IDFM')
+            ORDER BY mesures_ref_idfm ASC
+        `);
+        const measureList = measuresResult.map((r: any) => r.mesures_ref_idfm).filter(Boolean);
+        if (measureList.length > 0) {
+            setAvailableMeasures(measureList);
+        }
+    };
+
+    // Bascule de périmètre (Île-de-France rapide vs France entière)
+    const switchDataset = async (targetScope: 'IDF' | 'FRANCE') => {
+        if (targetScope === datasetScope) return;
+        try {
+            setIsLoading(true);
+            const targetUrl = targetScope === 'IDF' ? HF_PARQUET_URL_IDF : HF_PARQUET_URL_FRANCE;
+            await loadParquetFile(TABLE_NAME, targetUrl);
+            setDatasetScope(targetScope);
+            await loadOptionsFromDB();
+            setCurrentPage(1);
+        } catch (err) {
+            console.error("Erreur bascule dataset:", err);
+            alert("Erreur lors du chargement du jeu de données.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // 1. Initialisation DuckDB avec le dataset IDF allégé par défaut
     useEffect(() => {
         const initialize = async () => {
             try {
                 setIsLoading(true);
                 await initDuckDB();
-                await loadParquetFile(TABLE_NAME, PARQUET_URL);
+                await loadParquetFile(TABLE_NAME, HF_PARQUET_URL_IDF);
                 setDbReady(true);
-                
-                // Load Sectors
-                const sectorResult = await runQuery(`SELECT DISTINCT SECTEUR FROM ${TABLE_NAME} ORDER BY SECTEUR`);
-                const sectorList = sectorResult.map((r: any) => r.SECTEUR).filter(Boolean);
-                setSectors(sectorList);
-
-                // Load Geographic Options (Distinct Regions, EPCI)
-                // Using UNION to get a flat list
-                const geoQuery = `
-                    SELECT DISTINCT localisation_region_nom as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region_nom IS NOT NULL
-                    UNION
-                    SELECT DISTINCT localisation_epci_nom as name, 'EPCI' as type FROM ${TABLE_NAME} WHERE localisation_epci_nom IS NOT NULL
-                    ORDER BY name
-                `;
-                const geoResult = await runQuery(geoQuery);
-                setGeoOptions(geoResult as LocationItem[]);
-
-                // Load Years from DATE_DEPOT using standard extract function
-                const yearsResult = await runQuery(`
-                    SELECT DISTINCT EXTRACT(YEAR FROM DATE_DEPOT) as year 
-                    FROM ${TABLE_NAME} 
-                    WHERE DATE_DEPOT IS NOT NULL 
-                    ORDER BY year DESC
-                `);
-                const yearList = yearsResult.map((r: any) => r.year || r.YEAR).filter(Boolean);
-                setYears(yearList);
-
+                await loadOptionsFromDB();
             } catch (err) {
                 console.error("Erreur initialisation DuckDB:", err);
                 setFileError("Impossible de charger le dataset distant.");
@@ -140,22 +160,16 @@ const Dashboard: React.FC = () => {
         initialize();
     }, []);
 
-    // 2. Click outside handlers
+    // 2. Click outside handlers pour le dropdown géographique
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (sectorWrapperRef.current && !sectorWrapperRef.current.contains(event.target as Node)) {
-                setShowSectorSuggestions(false);
-            }
             if (geoWrapperRef.current && !geoWrapperRef.current.contains(event.target as Node)) {
                 setShowGeoSuggestions(false);
-            }
-            if (measureWrapperRef.current && !measureWrapperRef.current.contains(event.target as Node)) {
-                setShowMeasureSuggestions(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [sectorWrapperRef, geoWrapperRef, measureWrapperRef]);
+    }, [geoWrapperRef]);
 
     // 3. Filter Data using SQL
     useEffect(() => {
@@ -240,9 +254,9 @@ const Dashboard: React.FC = () => {
                 query += ` AND lower(ID) LIKE '%${idTerm}%'`;
             }
 
-            // Year Filter
+            // Year Filter (filtrage sur l'année de signature issue de DATE_TEXTE)
             if (selectedYear) {
-                query += ` AND year(CAST(DATE_DEPOT AS DATE)) = ${selectedYear}`;
+                query += ` AND EXTRACT(YEAR FROM CAST(DATE_TEXTE AS DATE)) = ${selectedYear}`;
             }
 
             try {
@@ -991,118 +1005,134 @@ const Dashboard: React.FC = () => {
                 </div>
             )}
 
+            {/* Scope Switcher Banner (Île-de-France vs France entière) */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-lg border bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/40 border-indigo-200 dark:border-indigo-800 shadow-xs">
+                <div className="flex items-center gap-3">
+                    <span className="text-2xl">{datasetScope === 'IDF' ? '🗼' : '🇫🇷'}</span>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                {datasetScope === 'IDF' ? 'Périmètre actif : Île-de-France (32 703 accords)' : 'Périmètre actif : France Entière (123 431 accords)'}
+                            </span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-semibold uppercase">
+                                {datasetScope === 'IDF' ? 'Chargement Rapide' : 'Exhaustif'}
+                            </span>
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                            {datasetScope === 'IDF' 
+                                ? 'Jeu de données allégé (14.6 Mo). Cliquez pour charger l\'ensemble des départements français si besoin.' 
+                                : 'Jeu de données national complet (82.7 Mo). Cliquez pour revenir à la version allégée francilienne.'}
+                        </p>
+                    </div>
+                </div>
+                <div>
+                    {datasetScope === 'IDF' ? (
+                        <button
+                            type="button"
+                            onClick={() => switchDataset('FRANCE')}
+                            disabled={isLoading}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-semibold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
+                        >
+                            <span>🇫🇷 Charger la France entière</span>
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => switchDataset('IDF')}
+                            disabled={isLoading}
+                            className="px-4 py-2 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
+                        >
+                            <span>🗼 Revenir à Île-de-France</span>
+                        </button>
+                    )}
+                </div>
+            </div>
+
             {/* Filters Section */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
                     {/* Global Search */}
-                    <div className="md:col-span-3">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <div className="lg:col-span-3">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
                             Recherche Globale
                         </label>
                         <input
                             type="text"
                             value={globalSearch}
                             onChange={e => setGlobalSearch(e.target.value)}
-                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
-                            placeholder="Entreprise, texte..."
+                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
+                            placeholder="Entreprise, SIRET, mot-clé..."
                         />
                     </div>
 
-                    {/* Measure Search */}
-                    <div className="md:col-span-3 relative" ref={measureWrapperRef}>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Mesure détectée
+                    {/* Mesure IDFM (Menu déroulant intuitif) */}
+                    <div className="lg:col-span-3">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
+                            Mesure IDFM
                         </label>
-                        <input
-                            type="text"
+                        <select
                             value={measureSearch}
-                            onChange={e => {
-                                setMeasureSearch(e.target.value);
-                                setShowMeasureSuggestions(true);
-                            }}
-                            onFocus={() => setShowMeasureSuggestions(true)}
-                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
-                            placeholder="Ex: forfait, vélo..."
-                        />
-                        {showMeasureSuggestions && (
-                            <ul className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                                {IDFM_MEASURES.filter(m => m.toLowerCase().includes(measureSearch.toLowerCase())).length > 0 ? 
-                                    IDFM_MEASURES.filter(m => m.toLowerCase().includes(measureSearch.toLowerCase())).map((measure) => (
-                                    <li
-                                        key={measure}
-                                        className="text-gray-900 dark:text-gray-200 cursor-pointer select-none relative py-2 pl-3 pr-4 hover:bg-indigo-600 hover:text-white"
-                                        onClick={() => {
-                                            setMeasureSearch(measure);
-                                            setShowMeasureSuggestions(false);
-                                        }}
-                                    >
-                                        <span className="block truncate" title={measure}>{measure}</span>
-                                    </li>
-                                )) : (
-                                    <li className="text-gray-500 dark:text-gray-400 cursor-default select-none relative py-2 pl-3 pr-9">
-                                        Aucune mesure IDFM correspondante
-                                    </li>
-                                )}
-                            </ul>
-                        )}
-                    </div>
-
-                    {/* Sector Chips Input */}
-                    <div className="md:col-span-3 relative" ref={sectorWrapperRef}>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Filtrer par Secteur(s)
-                        </label>
-                        <input
-                            type="text"
-                            value={sectorInput}
-                            onChange={e => {
-                                setSectorInput(e.target.value);
-                                setShowSectorSuggestions(true);
-                            }}
-                            onFocus={() => setShowSectorSuggestions(true)}
-                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
-                            placeholder={selectedSectors.length > 0 ? "Ajouter..." : "Sélectionner..."}
-                        />
-                        {showSectorSuggestions && sectorInput && (
-                            <ul className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                                {filteredSectorSuggestions.length > 0 ? filteredSectorSuggestions.map((sector) => (
-                                    <li
-                                        key={sector}
-                                        className="text-gray-900 dark:text-gray-200 cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-indigo-600 hover:text-white"
-                                        onClick={() => addSector(sector)}
-                                    >
-                                        {sector}
-                                    </li>
-                                )) : (
-                                    <li className="text-gray-500 dark:text-gray-400 cursor-default select-none relative py-2 pl-3 pr-9">
-                                        Aucun secteur trouvé
-                                    </li>
-                                )}
-                            </ul>
-                        )}
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {selectedSectors.map(sector => (
-                                <span key={sector} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-                                    {sector}
-                                    <button
-                                        type="button"
-                                        onClick={() => removeSector(sector)}
-                                        className="flex-shrink-0 ml-1.5 h-4 w-4 rounded-full inline-flex items-center justify-center text-indigo-400 hover:bg-indigo-200 hover:text-indigo-500 focus:outline-none focus:bg-indigo-500 focus:text-white"
-                                    >
-                                        <span className="sr-only">Remove {sector}</span>
-                                        <svg className="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
-                                            <path strokeLinecap="round" strokeWidth="1.5" d="M1 1l6 6m0-6L1 7" />
-                                        </svg>
-                                    </button>
-                                </span>
+                            onChange={e => setMeasureSearch(e.target.value)}
+                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
+                        >
+                            <option value="">Toutes les mesures IDFM ({availableMeasures.length})</option>
+                            {availableMeasures.map((measure) => (
+                                <option key={measure} value={measure}>
+                                    {measure}
+                                </option>
                             ))}
-                        </div>
+                        </select>
                     </div>
 
-                    {/* Geo Location Filter (Hybrid) */}
-                    <div className="md:col-span-3 relative" ref={geoWrapperRef}>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Lieu (Région, EPCI)
+                    {/* Secteur d'activité (Menu déroulant intuitif) */}
+                    <div className="lg:col-span-3">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
+                            Secteur d'activité
+                        </label>
+                        <select
+                            value={selectedSectors[0] || ""}
+                            onChange={e => {
+                                const val = e.target.value;
+                                setSelectedSectors(val ? [val] : []);
+                            }}
+                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
+                        >
+                            <option value="">Tous les secteurs ({sectors.length})</option>
+                            {sectors.map((sector) => (
+                                <option key={sector} value={sector}>
+                                    {sector}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Année de signature de l'accord (Menu déroulant DATE_TEXTE) */}
+                    <div className="lg:col-span-3">
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
+                            Année de signature
+                        </label>
+                        <select
+                            value={selectedYear}
+                            onChange={e => setSelectedYear(e.target.value)}
+                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
+                        >
+                            <option value="">Toutes les années ({years.length})</option>
+                            {years.map((y) => (
+                                <option key={y} value={y}>
+                                    {y}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {/* Deuxième rangée de filtres : Territoire & Reset */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+
+                    {/* Geo Location Filter */}
+                    <div className="md:col-span-9 relative" ref={geoWrapperRef}>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
+                            Territoire (Région, EPCI, EPT)
                         </label>
                         <input
                             type="text"
@@ -1112,11 +1142,11 @@ const Dashboard: React.FC = () => {
                                 setShowGeoSuggestions(true);
                             }}
                             onFocus={() => setShowGeoSuggestions(true)}
-                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
-                            placeholder={selectedLocations.length > 0 ? "Ajouter un lieu..." : "Taper un lieu..."}
+                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
+                            placeholder={selectedLocations.length > 0 ? "Ajouter un lieu..." : "Rechercher une région, un EPCI ou un EPT (ex: Grand Paris, Métropole de Lyon)..."}
                         />
                         {showGeoSuggestions && geoInput && (
-                            <ul className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                            <ul className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
                                 {filteredGeoSuggestions.length > 0 ? filteredGeoSuggestions.map((loc, idx) => (
                                     <li
                                         key={loc.name + loc.type + idx}
@@ -1152,6 +1182,30 @@ const Dashboard: React.FC = () => {
                                 </span>
                             ))}
                         </div>
+                    </div>
+
+                    {/* Reset Button */}
+                    <div className="md:col-span-3 flex items-end">
+                        {(globalSearch || measureSearch || selectedSectors.length > 0 || selectedLocations.length > 0 || selectedYear || onlyMobiliteIA || onlyIDF || ignoreRevendications || onlyFmdIkv || onlyEffortRemboursement) && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setGlobalSearch('');
+                                    setMeasureSearch('');
+                                    setSelectedSectors([]);
+                                    setSelectedLocations([]);
+                                    setSelectedYear('');
+                                    setOnlyMobiliteIA(false);
+                                    setOnlyIDF(false);
+                                    setIgnoreRevendications(false);
+                                    setOnlyFmdIkv(false);
+                                    setOnlyEffortRemboursement(false);
+                                }}
+                                className="w-full py-2 px-3 rounded-md text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900/50 transition-colors"
+                            >
+                                ✕ Réinitialiser les filtres
+                            </button>
+                        )}
                     </div>
                 </div>
 
