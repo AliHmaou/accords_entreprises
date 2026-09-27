@@ -123,7 +123,7 @@ const DetailsModal = ({ agreement, onClose, highlightTerm }: DetailsModalProps) 
 
     return (
         <div 
-            className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4 backdrop-blur-sm"
+            className="fixed inset-0 bg-black bg-opacity-60 z-[1100] flex justify-center items-center p-4 backdrop-blur-sm"
             onClick={onClose}
             role="dialog"
             aria-modal="true"

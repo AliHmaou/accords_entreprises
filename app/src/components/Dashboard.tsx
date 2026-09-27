@@ -1523,6 +1523,10 @@ const Dashboard: React.FC = () => {
                         <MapTab 
                             agreements={filteredAgreements} 
                             onMarkerClick={setSelectedAgreement} 
+                            onSwitchToMeasures={(companyName) => {
+                                setGlobalSearch(companyName);
+                                setActiveTab('measures');
+                            }}
                         />
                     </div>
                 )}
