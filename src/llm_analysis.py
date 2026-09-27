@@ -363,12 +363,29 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
 
     chunk_cache = {}
     
-    # Prépare les chunks valides (exclut les contextes vides)
+    # Gestion du Checkpoint pour reprise résiliente sans recalcul
+    from pathlib import Path
+    checkpoint_path = Path(output_parquet).with_suffix('.checkpoint.json')
+    if checkpoint_path.exists():
+        try:
+            with open(checkpoint_path, 'r', encoding='utf-8') as f:
+                saved_cache = json.load(f)
+                chunk_cache.update(saved_cache)
+            print(f"🔄 Checkpoint détecté : {len(saved_cache)} chunks déjà traités ont été rechargés !")
+        except Exception as e:
+            print(f"⚠️ Avertissement lors du chargement du checkpoint : {e}")
+
+    # Prépare les chunks valides (exclut les contextes vides et les chunks déjà en cache)
     valid_chunks_list = []
+    skipped_from_checkpoint = 0
     for idx, row in unique_chunks.iterrows():
         doc_id = row['ID']
         context = row.get(chunk_col)
         chunk_key = row['_chunk_key']
+
+        if chunk_key in chunk_cache:
+            skipped_from_checkpoint += 1
+            continue
 
         if pd.isna(context) or not str(context).strip():
             chunk_cache[chunk_key] = _normalize_result({
@@ -388,6 +405,9 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
                 "keyword": row.get('theme_recherche', ''),
                 "context": context
             })
+
+    if skipped_from_checkpoint > 0:
+        print(f"⚡ Reprise accélérée : {skipped_from_checkpoint} chunks sautés grâce au checkpoint !")
 
     # Regroupement dynamique en batch
     batches = []
@@ -459,6 +479,16 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
                 res = analyze_context_mock(item["ID"], item["context"], categories)
                 chunk_cache[item["chunk_key"]] = _normalize_result(res)
 
+        # Sauvegarde atomique périodique du checkpoint (tous les 10 batchs)
+        if count % (batch_size * 2) == 0 or count >= len(valid_chunks_list):
+            try:
+                tmp_ckpt = checkpoint_path.with_suffix('.tmp')
+                with open(tmp_ckpt, 'w', encoding='utf-8') as f:
+                    json.dump(chunk_cache, f, ensure_ascii=False)
+                tmp_ckpt.replace(checkpoint_path)
+            except Exception as e:
+                pass
+
     target_columns = [
         "resume_mesure_proposee", "mot_cle_calcule",
         "mentionne_mobilite_ia", "est_mobilites_durables", "est_revendication",
@@ -496,6 +526,11 @@ def process_llm(input_parquet: str, output_parquet: str, categories_csv: str, id
 
     df.to_parquet(output_parquet)
     print(f"Analyse terminée. Fichier final sauvegardé dans : {output_parquet}")
+    if checkpoint_path.exists():
+        try:
+            checkpoint_path.unlink()
+        except Exception:
+            pass
 
 def _parse_list_to_str(val: str) -> str:
     import json

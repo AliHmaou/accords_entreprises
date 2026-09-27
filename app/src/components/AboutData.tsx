@@ -1,23 +1,25 @@
-import React from 'react';
+import React from "react";
 
 const AboutData: React.FC = () => {
   return (
     <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 prose dark:prose-invert max-w-none">
-      <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-6">Documentation du jeu de données des Accords d'Entreprise sur la Mobilité Durable (Vision Consolidée 2024-2026)</h2>
+      <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-6">
+        Documentation du jeu de données des Accords d'Entreprise sur la Mobilité Durable (Vision Consolidée 2022-2026)
+      </h2>
       
       <h3>1. Description fonctionnelle du fichier</h3>
       <p>
-        Ce jeu de données est issu du traitement et de l'enrichissement de la base <strong>ACCO</strong> (accords collectifs d'entreprises) publiée par la DILA en open data (accessible à l'adresse suivante : <a href="https://echanges.dila.gouv.fr/OPENDATA/ACCO/" target="_blank" rel="noreferrer">Index Open Data de la DILA ACCO</a>). 
+        Ce jeu de données est issu du traitement et de l'enrichissement de la base <strong>ACCO</strong> (accords collectifs d'entreprises) publiée par la DILA en open data (accessible sur <a href="https://echanges.dila.gouv.fr/OPENDATA/ACCO/" target="_blank" rel="noreferrer">l'Index Open Data de la DILA ACCO</a>).
       </p>
       <p>
         Pour répondre aux besoins d'analyse d'<strong>Île-de-France Mobilités (IDFM)</strong>, un pipeline complet a été mis en place pour identifier dans ces accords lesquels abordent la thématique des mobilités durables et quelles mesures concrètes y sont actées.
       </p>
       <p>
-        Le traitement combine un filtrage sémantique sur la base de mots-clés métiers (Jalon 1), une analyse approfondie par Intelligence Artificielle (Jalon 2, via Azure AI Foundry avec <code>gpt-5.4-nano</code> et <code>qwen/qwen3.8-27b</code>), un enrichissement géographique SIRENE / EPCI / EPT (Jalon 3 via DuckDB), et un dédoublonnage métier rigoureux.
+        Le traitement combine un filtrage sémantique sur la base de mots-clés métiers (Jalon 1), une analyse approfondie par Intelligence Artificielle (Jalon 2, via Azure AI Foundry avec <code>gpt-5.4-nano</code> et <code>qwen/qwen3.8-27b</code>), un enrichissement géographique SIRENE / EPCI / EPT / Départements (Jalon 3 via DuckDB), et un dédoublonnage métier rigoureux.
       </p>
 
       <div className="bg-emerald-50 dark:bg-emerald-950/20 p-4 border-l-4 border-emerald-500 rounded-r-lg my-4">
-        ✨ <strong>Couverture multi-annuelle :</strong> Ce dataset consolide désormais l'ensemble de l'année <strong>2024 complète (janvier à décembre)</strong> ainsi que les accords de <strong>2025 et 2026</strong> (plus les accords pluriannuels antérieurs toujours en vigueur).
+        ✨ <strong>Couverture multi-annuelle complète :</strong> Ce dataset master consolide désormais les années <strong>2022, 2023, 2024, 2025 et 2026</strong>, représentant <strong>198 497 accords uniques</strong> signés par plus de <strong>54 700 entreprises</strong>.
       </div>
 
       <hr className="my-6 border-gray-200 dark:border-gray-700"/>
@@ -34,7 +36,7 @@ const AboutData: React.FC = () => {
               className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 no-underline"
           >
               <svg className="mr-2 -ml-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-              Dataset Île-de-France (14.6 Mo - 32k accords)
+              Dataset Île-de-France (62 Mo • 50 425 accords)
           </a>
           <a 
               href="https://huggingface.co/datasets/alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES/resolve/main/IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet" 
@@ -43,121 +45,39 @@ const AboutData: React.FC = () => {
               className="inline-flex items-center justify-center px-4 py-2 border border-slate-300 dark:border-slate-600 text-sm font-medium rounded-md shadow-sm text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none no-underline"
           >
               <svg className="mr-2 -ml-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-              Dataset France Entière (82.7 Mo - 123k accords)
+              Dataset France Entière (179 Mo • 198 497 accords)
           </a>
       </div>
 
-      <hr className="my-6 border-gray-200 dark:border-gray-700"/>
-
-      <h3>3. Enrichissements et nouveaux indicateurs</h3>
-
-      <h4>🎯 A. Classification selon le Référentiel IDFM (<code>mesures_ref_idfm</code>)</h4>
-      <p>
-        Chaque accord identifié comme traitant de la mobilité est associé à une ou plusieurs des 16 mesures de la nomenclature officielle IDFM :
-      </p>
-      <ul>
-        <li><strong>Mobilités actives & partagées :</strong> <em>Promouvoir le vélo</em>, <em>Organiser le stationnement des véhicules et des vélos</em>, <em>Encourager la marche</em>, <em>Inclure les engins de déplacements personnels EDPM</em>, <em>Promouvoir le covoiturage</em>, <em>Promouvoir l’autopartage</em>.</li>
-        <li><strong>Accompagnement financier :</strong> <em>Mettre en place le forfait mobilité durable et l'indemnité kilométrique vélo IKV</em>, <em>Rembourser les transports en commun</em>, <em>Déployer des dispositifs financiers d’aide à la mobilité</em>.</li>
-        <li><strong>Organisation du travail & plans d'entreprise :</strong> <em>Organiser le télétravail et les horaires de travail</em>, <em>Mettre en place un plan de mobilité employeur</em>, <em>Prendre en compte la mobilité des salariés</em>.</li>
-        <li><strong>Flottes & Transition énergétique :</strong> <em>Soutenir la transition énergétique du parc de véhicules de l’entreprise</em>, <em>Transition énergétique</em>, <em>Organiser l’usage de la voiture et des deux-roues motorisés</em>, <em>Améliorer la sécurité routière</em>.</li>
-      </ul>
-
-      <h4>✨ B. Nouveaux Indicateurs Avancés</h4>
-      <ul>
-        <li><strong>Dépassement du taux légal de remboursement (<code>est_superieur_taux_legal</code>) :</strong> Isole les accords d'entreprise prévoyant un remboursement des transports publics supérieur à l'obligation légale de 50% (ex: 60%, 75%, 100% ou revalorisation explicite de la prise en charge employeur).</li>
-        <li><strong>FMD / IKV confirmé (<code>est_fmd_ikv_mis_en_place</code>) :</strong> Confirme la mise en place ou le maintien effectif du Forfait Mobilités Durables ou de l'Indemnité Kilométrique Vélo (exclut les refus ou reports de mise en place).</li>
-        <li><strong>Filtrage des revendications (<code>est_revendication</code>) :</strong> Distingue une mesure actée définitivement par accord d'une simple demande syndicale préalable ou d'un point à aborder lors des négociations.</li>
-      </ul>
-
-      <h4>🏢 C. Données SIRENE et rattachement au Territoire (INSEE / EPCI / EPT)</h4>
-      <p>
-        Le pipeline interroge la base de données <strong>SIRENE géolocalisée</strong> de l'INSEE, le <strong>référentiel géographique du MESR</strong> ainsi que le fichier officiel de composition communale des <strong>Établissements Publics Territoriaux (EPT)</strong> du Grand Paris :
-      </p>
-      <ul>
-        <li><strong>La taille / catégorie de l'entreprise</strong> (<code>categorie_entreprise</code>) : PME, ETI ou GE.</li>
-        <li><strong>Le secteur d'activité</strong> (<code>SECTEUR</code>) et Code APE (<code>CODE_APE</code>).</li>
-        <li><strong>Rattachement territorial complet :</strong> Commune, EPCI, EPT francilien (T1 à T12), Département et Région.</li>
-      </ul>
-
-      <hr className="my-6 border-gray-200 dark:border-gray-700"/>
-
-      <h3>4. Période et Volume des données (Consolidé 2024-2026)</h3>
-      <p>
-        Le jeu de données consolide <strong>123 431 lignes</strong> issues de <strong>96 967 accords d'entreprise uniques</strong> et <strong>39 181 établissements employeurs</strong> (SIRET).
-      </p>
-      <ul>
-        <li><strong>Année 2024 :</strong> 51 703 lignes (12 mois complets de janvier à décembre)</li>
-        <li><strong>Année 2025 :</strong> 53 758 lignes</li>
-        <li><strong>Année 2026 :</strong> 15 933 lignes (première moitié d'année)</li>
-        <li><strong>Accords antérieurs :</strong> 2 037 lignes (accords pluriannuels en vigueur)</li>
-      </ul>
-      <p>
-        Pour les publications hebdomadaires, c'est le nom de l'export d'origine qui est documenté :
-      </p>
-      <ul>
-        <li><strong><code>ACCO_YYYYMMDD-HHMMSS.tar.gz</code></strong> (ex : <code>ACCO_20250708-064156.tar.gz</code>).</li>
-      </ul>
-      <p>
-        Le fichier comporte également un lien direct hypertexte vers la page Légifrance officielle de publication de l'accord.
-      </p>
-
-      <div className="my-6 p-4 bg-indigo-50 dark:bg-gray-700 rounded-lg border border-indigo-100 dark:border-gray-600">
-        <h3 className="mt-0 text-indigo-700 dark:text-indigo-300">📥 Téléchargement des données brutes (Hugging Face)</h3>
-        <p className="text-sm mb-4">
-            Vous pouvez télécharger le fichier Parquet consolidé, corrigé et dédoublonné utilisé directement par ce dashboard :
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4">
-            <a 
-                href="https://huggingface.co/datasets/alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES/resolve/main/IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet" 
-                target="_blank" 
-                rel="noreferrer"
-                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 no-underline"
-            >
-                <svg className="mr-2 -ml-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                Dataset Complet (Corrigé, Dédoublonné, avec EPT & Audit)
-            </a>
-        </div>
+      <div className="bg-slate-50 dark:bg-slate-900/40 p-4 border border-slate-200 dark:border-slate-700 rounded-lg text-sm my-4">
+        <strong>💡 Recommandation d'usage :</strong> L'application démarre par défaut sur le sous-ensemble <em>Île-de-France</em> pour un temps de chargement immédiat. Vous pouvez basculer à tout moment sur la vision <em>France Entière</em> via le sélecteur situé dans l'en-tête du Dashboard.
       </div>
 
-      <h3>3. Période et Volume des données (Vérifié)</h3>
+      <h3>3. Répartition temporelle et volumétrie par année de signature</h3>
       <p>
-        Le jeu de données se focalise sur les accords dont la <strong>date de signature (date de texte)</strong> se situe en <strong>2025</strong>. Le volume total s'élève à <strong>40 398 accords de mobilité uniques</strong>.
-      </p>
-      <p>
-        Le tableau ci-dessous détaille de manière précise la répartition mensuelle des dépôts réels de ces accords s'étalant sur les années 2025 et 2026 :
+        Le tableau ci-dessous synthétise la volumétrie d'accords collectifs consolidés par année de signature (DATE_TEXTE) :
       </p>
       <div className="overflow-x-auto my-4">
         <table className="min-w-full border-collapse text-sm border border-gray-200 dark:border-gray-700">
             <thead>
                 <tr className="bg-gray-100 dark:bg-gray-700 border-b dark:border-gray-600">
-                    <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-200">Année de signature (Date texte)</th>
-                    <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-200">Mois de dépôt (Date dépôt)</th>
-                    <th className="px-4 py-2 text-right font-semibold text-gray-700 dark:text-gray-200">Nombre d'accords uniques</th>
+                    <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-200">Année de signature (DATE_TEXTE)</th>
+                    <th className="px-4 py-2 text-right font-semibold text-gray-700 dark:text-gray-200">Total Accords Collectifs</th>
+                    <th className="px-4 py-2 text-right font-semibold text-gray-700 dark:text-gray-200">Accords Mobilité Confirmés IA</th>
+                    <th className="px-4 py-2 text-right font-semibold text-gray-700 dark:text-gray-200">Part Mobilité (%)</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-600 bg-white dark:bg-gray-800">
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2025-01</td><td className="px-4 py-2 text-right font-mono">1 763</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2025-02</td><td className="px-4 py-2 text-right font-mono">3 405</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2025-03</td><td className="px-4 py-2 text-right font-mono">3 889</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2025-04</td><td className="px-4 py-2 text-right font-mono">3 822</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2025-05</td><td className="px-4 py-2 text-right font-mono">3 088</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2025-06</td><td className="px-4 py-2 text-right font-mono">3 583</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2025-07</td><td className="px-4 py-2 text-right font-mono">3 751</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2025-08</td><td className="px-4 py-2 text-right font-mono">1 220</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2025-09</td><td className="px-4 py-2 text-right font-mono">1 974</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2025-10</td><td className="px-4 py-2 text-right font-mono">2 554</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2025-11</td><td className="px-4 py-2 text-right font-mono">2 540</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2025-12</td><td className="px-4 py-2 text-right font-mono">5 793</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2026-01</td><td className="px-4 py-2 text-right font-mono">2 094</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2026-02</td><td className="px-4 py-2 text-right font-mono">564</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2026-03</td><td className="px-4 py-2 text-right font-mono">281</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2026-04</td><td className="px-4 py-2 text-right font-mono">74</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2026-05</td><td className="px-4 py-2 text-right font-mono">1</td></tr>
-                <tr><td className="px-4 py-2">2025</td><td className="px-4 py-2 font-mono">2026-06</td><td className="px-4 py-2 text-right font-mono">2</td></tr>
-                <tr className="bg-indigo-50 dark:bg-indigo-900/20 font-bold">
-                    <td className="px-4 py-2">Total 2025</td>
-                    <td className="px-4 py-2">Complet (Dépôts 2025 - 2026)</td>
-                    <td className="px-4 py-2 text-right font-mono">40 398</td>
+                <tr><td className="px-4 py-2 font-mono">2022</td><td className="px-4 py-2 text-right font-mono">52 023</td><td className="px-4 py-2 text-right font-mono text-emerald-600 font-semibold">9 256</td><td className="px-4 py-2 text-right font-mono">17,8 %</td></tr>
+                <tr><td className="px-4 py-2 font-mono">2023</td><td className="px-4 py-2 text-right font-mono">50 852</td><td className="px-4 py-2 text-right font-mono text-emerald-600 font-semibold">8 397</td><td className="px-4 py-2 text-right font-mono">16,5 %</td></tr>
+                <tr><td className="px-4 py-2 font-mono">2024</td><td className="px-4 py-2 text-right font-mono">45 681</td><td className="px-4 py-2 text-right font-mono text-emerald-600 font-semibold">8 372</td><td className="px-4 py-2 text-right font-mono">18,3 %</td></tr>
+                <tr><td className="px-4 py-2 font-mono">2025</td><td className="px-4 py-2 text-right font-mono">40 398</td><td className="px-4 py-2 text-right font-mono text-emerald-600 font-semibold">8 635</td><td className="px-4 py-2 text-right font-mono">21,4 %</td></tr>
+                <tr><td className="px-4 py-2 font-mono">2026 (en cours)</td><td className="px-4 py-2 text-right font-mono">8 996</td><td className="px-4 py-2 text-right font-mono text-emerald-600 font-semibold">2 029</td><td className="px-4 py-2 text-right font-mono">22,6 %</td></tr>
+                <tr className="bg-indigo-50 dark:bg-indigo-900/30 font-bold">
+                    <td className="px-4 py-2">Total Consolidé (2022-2026)</td>
+                    <td className="px-4 py-2 text-right font-mono">198 497</td>
+                    <td className="px-4 py-2 text-right font-mono text-emerald-600 font-bold">36 800</td>
+                    <td className="px-4 py-2 text-right font-mono">18,5 %</td>
                 </tr>
             </tbody>
         </table>
@@ -165,9 +85,30 @@ const AboutData: React.FC = () => {
 
       <hr className="my-6 border-gray-200 dark:border-gray-700"/>
 
-      <h3>4. Dictionnaire de données complet</h3>
+      <h3>4. Indicateurs Qualitatifs & Détections Clés par IA</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-4 not-prose">
+        <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20">
+          <div className="text-xs uppercase font-bold text-emerald-800 dark:text-emerald-300">Mobilités Durables Actées</div>
+          <div className="text-2xl font-black text-emerald-600 mt-1">27 649 accords</div>
+          <div className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">75,1% des accords mobilité encouragent activement les modes actifs et partagés.</div>
+        </div>
+        <div className="p-4 rounded-xl border border-purple-200 bg-purple-50/50 dark:bg-purple-950/20">
+          <div className="text-xs uppercase font-bold text-purple-800 dark:text-purple-300">Forfait FMD & IKV</div>
+          <div className="text-2xl font-black text-purple-600 mt-1">5 874 accords</div>
+          <div className="text-xs text-purple-700 dark:text-purple-400 mt-1">16,0% mettent en place ou revalorisent le Forfait Mobilités Durables ou l'IKV.</div>
+        </div>
+        <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50 dark:bg-indigo-950/20">
+          <div className="text-xs uppercase font-bold text-indigo-800 dark:text-indigo-300">Transports Publics &gt; 50%</div>
+          <div className="text-2xl font-black text-indigo-600 mt-1">3 820 accords</div>
+          <div className="text-xs text-indigo-700 dark:text-indigo-400 mt-1">L'employeur dépasse l'obligation légale de 50% (prise en charge à 60%, 75% ou 100%).</div>
+        </div>
+      </div>
+
+      <hr className="my-6 border-gray-200 dark:border-gray-700"/>
+
+      <h3>5. Dictionnaire des données complet (45 colonnes)</h3>
       <p>
-        Les champs fondamentaux pour s'assurer qu'un accord porte bien sur des mesures de mobilité d'intérêt pour IDFM sont <strong><code>mentionne_mobilite_ia</code></strong> et <strong><code>mesures_ref_idfm</code></strong> (qui valident respectivement la pertinence sémantique et la classification).
+        Les champs pivots sont <strong><code>mentionne_mobilite_ia</code></strong> (validation sémantique IA) et <strong><code>mesures_ref_idfm</code></strong> (classification normalisée sur les 16 mesures d'IDFM).
       </p>
       
       <div className="overflow-x-auto mt-4">
@@ -182,124 +123,103 @@ const AboutData: React.FC = () => {
           <tbody className="divide-y divide-gray-200 dark:divide-gray-600 bg-white dark:bg-gray-800">
             <tr>
                 <td className="p-3 font-mono text-indigo-600 font-bold">mentionne_mobilite_ia</td>
-                <td className="p-3 font-semibold text-green-600 dark:text-green-400">Indicateur de pertinence sémantique (Pivot IDFM)</td>
-                <td className="p-3 italic">Garantit par IA que l'accord porte bien sur des mesures d'intérêt pour IDFM (ex : True, False).</td>
+                <td className="p-3 font-semibold text-green-600 dark:text-green-400">Validation IA Mobilité (Pivot IDFM)</td>
+                <td className="p-3 italic">Confirme que l'extrait traite bien de la mobilité des employés (Oui / Non).</td>
             </tr>
             <tr>
                 <td className="p-3 font-mono text-indigo-600 font-bold">mesures_ref_idfm</td>
                 <td className="p-3 font-semibold text-green-600 dark:text-green-400">Classification Référentiel IDFM (Pivot IDFM)</td>
-                <td className="p-3 italic">Association normalisée à l'une des mesures officielles d'IDFM (ex : Promouvoir le vélo, FMD, etc.).</td>
+                <td className="p-3 italic">Association normalisée à l'une des 16 mesures officielles d'IDFM (ex : Promouvoir le vélo, FMD, Télétravail, etc.).</td>
             </tr>
             <tr>
                 <td className="p-3 font-mono text-indigo-600 font-bold">est_mobilites_durables</td>
                 <td className="p-3 font-semibold text-green-600 dark:text-green-400">Qualifiant Mobilités Durables</td>
-                <td className="p-3 italic">Indicateur déterminant si la mesure s'inscrit spécifiquement dans les mobilités durables (ex : True, False).</td>
+                <td className="p-3 italic">Indicateur déterminant si la mesure s'inscrit spécifiquement dans les mobilités durables (Oui / Non).</td>
             </tr>
             <tr>
-                <td className="p-3 font-mono text-indigo-600 font-bold">est_revendication</td>
-                <td className="p-3 font-semibold text-red-600 dark:text-red-400">Indicateur de revendication</td>
-                <td className="p-3 italic">Indique s'il s'agit d'une revendication syndicale ou d'un objectif de négociation, plutôt que d'une mesure d'application d'ores et déjà actée (ex : True, False).</td>
+                <td className="p-3 font-mono text-indigo-600 font-bold">est_fmd_ikv_mis_en_place</td>
+                <td className="p-3 font-semibold text-purple-600 dark:text-purple-400">Mise en place Forfait Mobilités Durables / IKV</td>
+                <td className="p-3 italic">Indique si le texte confirme la mise en place ou le maintien du FMD ou de l'IKV (Oui / Non).</td>
             </tr>
             <tr>
                 <td className="p-3 font-mono text-indigo-600 font-bold">est_superieur_taux_legal</td>
                 <td className="p-3 font-semibold text-purple-600 dark:text-purple-400">Prise en charge transports &gt; 50%</td>
-                <td className="p-3 italic">Indique si l'accord prévoit une prise en charge des abonnements de transports publics strictement supérieure à l'obligation légale de 50% (ex : 60%, 75%, 100%, revalorisation) (Oui, Non).</td>
+                <td className="p-3 italic">Remboursement des abonnements de transport public au-delà des 50% légaux (60%, 75%, 100%) (Oui / Non).</td>
             </tr>
             <tr>
-                <td className="p-3 font-mono text-indigo-600 font-bold">est_fmd_ikv_mis_en_place</td>
-                <td className="p-3 font-semibold text-emerald-600 dark:text-emerald-400">Forfait Mobilité Durable / IKV acté</td>
-                <td className="p-3 italic">Confirme que l'entreprise met en place ou maintient le Forfait Mobilités Durables ou l'Indemnité Kilométrique Vélo (Oui, Non).</td>
+                <td className="p-3 font-mono text-indigo-600 font-bold">est_revendication</td>
+                <td className="p-3 font-semibold text-amber-600 dark:text-amber-400">Indicateur de revendication syndicale</td>
+                <td className="p-3 italic">Distingue une demande préalable ou point de négociation d'une mesure définitivement actée (Oui / Non).</td>
             </tr>
-
             <tr>
                 <td className="p-3 font-mono text-indigo-600">ID</td>
-                <td className="p-3">Identifiant unique</td>
-                <td className="p-3 italic">ACCOTEXT000049122745</td>
+                <td className="p-3">Identifiant LégiFrance</td>
+                <td className="p-3 italic">Clé primaire de l'accord (ex : ACCOTEXT000045063939).</td>
             </tr>
             <tr>
                 <td className="p-3 font-mono text-indigo-600">RAISON_SOCIALE</td>
-                <td className="p-3">Raison sociale</td>
-                <td className="p-3 italic">Dénomination ou raison sociale de l'entreprise d'accueil (INSEE/SIRENE).</td>
+                <td className="p-3">Raison Sociale</td>
+                <td className="p-3 italic">Nom de l'entreprise signataire.</td>
             </tr>
             <tr>
                 <td className="p-3 font-mono text-indigo-600">SIRET</td>
-                <td className="p-3">SIRET</td>
-                <td className="p-3 italic">Identifiant unique de l'établissement d'accueil physique (14 chiffres).</td>
+                <td className="p-3">Numéro SIRET</td>
+                <td className="p-3 italic">Numéro d'identification de l'établissement (14 chiffres).</td>
             </tr>
             <tr>
                 <td className="p-3 font-mono text-indigo-600">TITRE_TXT</td>
-                <td className="p-3">Titre officiel</td>
-                <td className="p-3 italic">Objet d'entreprise relatif à l'organisation de l'accord.</td>
-            </tr>
-             <tr>
-                <td className="p-3 font-mono text-indigo-600">DATE_DEPOT</td>
-                <td className="p-3">Date de dépôt</td>
-                <td className="p-3 italic">Date officielle de dépôt de l'accord à la DILA.</td>
-            </tr>
-             <tr>
-                <td className="p-3 font-mono text-indigo-600 font-semibold">DATE_TEXTE</td>
-                <td className="p-3">Date de signature (date texte)</td>
-                <td className="p-3 italic">Date de signature de l'accord (critère de filtre Vision 2025).</td>
+                <td className="p-3">Titre de l'accord</td>
+                <td className="p-3 italic">Intitulé officiel de l'accord tel que déposé.</td>
             </tr>
             <tr>
-                <td className="p-3 font-mono text-indigo-600">CODE_APE</td>
-                <td className="p-3">Code APE</td>
-                <td className="p-3 italic">Code caractérisant l'activité de l'entreprise d'accueil.</td>
+                <td className="p-3 font-mono text-indigo-600">DATE_TEXTE</td>
+                <td className="p-3">Date de signature</td>
+                <td className="p-3 italic">Date effective de signature de l'accord.</td>
+            </tr>
+            <tr>
+                <td className="p-3 font-mono text-indigo-600">DATE_DEPOT</td>
+                <td className="p-3">Date de dépôt</td>
+                <td className="p-3 italic">Date de dépôt légal et publication DILA.</td>
             </tr>
             <tr>
                 <td className="p-3 font-mono text-indigo-600">SECTEUR</td>
                 <td className="p-3">Secteur d'activité</td>
-                <td className="p-3 italic">Libellé clair décrivant le secteur de l'entreprise.</td>
-            </tr>
-            <tr>
-                <td className="p-3 font-mono text-indigo-600">source_archive</td>
-                <td className="p-3">Archive source</td>
-                <td className="p-3 italic">Nom de l'archive ZIP/Tar.gz de la DILA d'origine.</td>
-            </tr>
-            <tr>
-                <td className="p-3 font-mono text-indigo-600">source_file</td>
-                <td className="p-3">Fichier d'audit</td>
-                <td className="p-3 italic">Nom du fichier parquet unitaire d'origine d'ingestion (traçabilité complète).</td>
-            </tr>
-            <tr>
-                <td className="p-3 font-mono text-indigo-600">extrait_chunk</td>
-                <td className="p-3">Extrait pertinent</td>
-                <td className="p-3 italic">Texte d'extrait conservé en taille maximale justifiant l'analyse.</td>
-            </tr>
-            <tr>
-                <td className="p-3 font-mono text-indigo-600">mesure_extraite</td>
-                <td className="p-3">Synthèse sémantique</td>
-                <td className="p-3 italic">Synthèse des mesures concrètes d'application rédigée par l'IA.</td>
-            </tr>
-            <tr>
-                <td className="p-3 font-mono text-indigo-600">moyens_materiels</td>
-                <td className="p-3">Moyens matériels</td>
-                <td className="p-3 italic">Aides matérielles identifiées par l'IA (ex : Vélos de fonction, Bornes).</td>
-            </tr>
-            <tr>
-                <td className="p-3 font-mono text-indigo-600">moyens_financiers</td>
-                <td className="p-3">Moyens financiers</td>
-                <td className="p-3 italic">Aides financières identifiées par l'IA (ex : FMD, Pass Navigo, IKV).</td>
-            </tr>
-            <tr>
-                <td className="p-3 font-mono text-indigo-600">localisation_ept_nom</td>
-                <td className="p-3">Établissement Public Territorial</td>
-                <td className="p-3 italic">Nom officiel clair de l'EPT d'Île-de-France (T1 à T12) (ex : Grand-Orly Seine Bièvre).</td>
-            </tr>
-            <tr>
-                <td className="p-3 font-mono text-indigo-600">localisation_epci_nom</td>
-                <td className="p-3">EPCI de rattachement</td>
-                <td className="p-3 italic">Nom de l'EPCI (ex : Métropole du Grand Paris, CA Troyes Champagne Métropole).</td>
+                <td className="p-3 italic">Libellé clair du secteur économique de l'entreprise.</td>
             </tr>
             <tr>
                 <td className="p-3 font-mono text-indigo-600">categorie_entreprise</td>
                 <td className="p-3">Taille d'entreprise</td>
-                <td className="p-3 italic">Taille de l'entreprise d'accueil (ex : PME, ETI, GE).</td>
+                <td className="p-3 italic">Taille de l'entreprise d'après l'INSEE (PME, ETI, GE).</td>
+            </tr>
+            <tr>
+                <td className="p-3 font-mono text-indigo-600">localisation_departement_nom</td>
+                <td className="p-3">Département</td>
+                <td className="p-3 italic">Nom du département d'implantation (ex : Paris, Hauts-de-Seine, Rhône).</td>
+            </tr>
+            <tr>
+                <td className="p-3 font-mono text-indigo-600">localisation_region_nom</td>
+                <td className="p-3">Région</td>
+                <td className="p-3 italic">Nom de la région administrative (ex : Île-de-France, Auvergne-Rhône-Alpes).</td>
+            </tr>
+            <tr>
+                <td className="p-3 font-mono text-indigo-600">localisation_epci_nom</td>
+                <td className="p-3">EPCI de rattachement</td>
+                <td className="p-3 italic">Nom de l'intercommunalité / métropole (ex : Métropole du Grand Paris).</td>
+            </tr>
+            <tr>
+                <td className="p-3 font-mono text-indigo-600">localisation_ept_nom</td>
+                <td className="p-3">Établissement Public Territorial (IDF)</td>
+                <td className="p-3 italic">Nom de l'EPT francilien (T1 à T12) (ex : Grand-Orly Seine Bièvre).</td>
+            </tr>
+            <tr>
+                <td className="p-3 font-mono text-indigo-600">mesure_extraite</td>
+                <td className="p-3">Synthèse sémantique</td>
+                <td className="p-3 italic">Mesures concrètes rédigées de façon synthétique par l'IA.</td>
             </tr>
             <tr>
                 <td className="p-3 font-mono text-indigo-600">url_legifrance</td>
                 <td className="p-3">Lien Légifrance</td>
-                <td className="p-3 italic text-indigo-500 break-all">Lien vers Légifrance.</td>
+                <td className="p-3 italic text-indigo-500 break-all">Lien d'accès direct au texte intégral officiel sur Légifrance.</td>
             </tr>
           </tbody>
         </table>

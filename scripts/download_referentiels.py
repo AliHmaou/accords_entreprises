@@ -13,8 +13,8 @@ import duckdb
 # Configurations des 4 référentiels Open Data requis par le pipeline (Jalon 3 - Géolocalisation)
 REFERENTIELS = {
     "geoloc-geolocalisationetablissement-sirene-pour-etudes-statistiques-parquet.parquet": {
-        "url": "https://static.data.gouv.fr/resources/geolocalisation-des-etablissements-du-repertoire-sirene-pour-les-etudes-statistiques/20260821-081708/geoloc-geolocalisationetablissement-sirene-pour-etudes-statistiques-parquet.parquet",
-        "desc": "Base SIRENE géolocalisée (Insee data.gouv - Août 2026)",
+        "url": "https://static.data.gouv.fr/resources/geolocalisation-des-etablissements-du-repertoire-sirene-pour-les-etudes-statistiques/20260921-065930/geoloc-geolocalisationetablissement-sirene-pour-etudes-statistiques-parquet.parquet",
+        "desc": "Base SIRENE géolocalisée (Insee data.gouv - Septembre 2026)",
         "type": "parquet"
     },
     "StockUniteLegale_utf8.parquet": {

@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Observatoire National des Accords d'Entreprise - Mobilités (2022-2026)</title>
+  <style>
+    :root {
+      --primary: #4338ca;
+      --primary-light: #6366f1;
+      --primary-bg: #eef2ff;
+      --emerald: #059669;
+      --emerald-bg: #ecfdf5;
+      --purple: #7c3aed;
+      --purple-bg: #f5f3ff;
+      --cyan: #0891b2;
+      --cyan-bg: #ecfeff;
+      --amber: #d97706;
+      --amber-bg: #fffbeb;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50: #f8fafc;
+      --white: #ffffff;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--slate-50);
+      color: var(--slate-800);
+      line-height: 1.5;
+      padding-bottom: 50px;
+    }
+    header {
+      background: linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #1e293b 100%);
+      color: var(--white);
+      padding: 36px 24px;
+      box-shadow: var(--shadow-md);
+    }
+    .header-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    @media (min-width: 768px) {
+      .header-inner { flex-direction: row; justify-content: space-between; align-items: center; }
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: rgba(99, 102, 241, 0.2);
+      border: 1px solid rgba(165, 180, 252, 0.3);
+      color: #c7d2fe;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    h1 { font-size: 26px; font-weight: 800; }
+    .header-sub { color: #cbd5e1; font-size: 14px; margin-top: 4px; }
+    .header-box {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      text-align: right;
+    }
+    .header-box .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+    .header-box .val { font-size: 18px; font-weight: 700; color: #fff; }
+    .header-box .sub { font-size: 11px; color: #34d399; font-weight: 600; }
+
+    main { max-width: 1200px; margin: 32px auto 0; padding: 0 20px; display: flex; flex-direction: column; gap: 28px; }
+
+    /* Grid layout */
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 22px; }
+    @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--white);
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      box-shadow: var(--shadow-sm);
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--slate-900);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    /* KPI Cards */
+    .kpi-card { position: relative; overflow: hidden; }
+    .kpi-lbl { font-size: 11px; font-weight: 700; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.04em; }
+    .kpi-val { font-size: 30px; font-weight: 800; color: var(--slate-900); margin: 8px 0 4px; line-height: 1.1; }
+    .kpi-sub { font-size: 12px; color: var(--slate-600); }
+    .kpi-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .tag-emerald { background: var(--emerald-bg); color: var(--emerald); }
+    .tag-purple { background: var(--purple-bg); color: var(--purple); }
+    .tag-cyan { background: var(--cyan-bg); color: var(--cyan); }
+    .tag-indigo { background: var(--primary-bg); color: var(--primary); }
+
+    /* Highlights Section */
+    .highlight-card {
+      background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+    .highlight-card.purple { border-left: 4px solid var(--purple); }
+    .highlight-card.emerald { border-left: 4px solid var(--emerald); }
+    .highlight-card.cyan { border-left: 4px solid var(--cyan); }
+    .highlight-card.indigo { border-left: 4px solid var(--primary); }
+
+    /* Progress bars */
+    .bar-item { margin-bottom: 12px; }
+    .bar-header { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    .bar-bg { background: var(--slate-100); height: 10px; border-radius: 9999px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 9999px; transition: width 0.6s ease; }
+
+    /* Interactive SVG Charts */
+    .chart-container { width: 100%; height: 260px; position: relative; }
+    svg { overflow: visible; width: 100%; height: 100%; }
+
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      background: var(--slate-900);
+      color: var(--white);
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      white-space: nowrap;
+      z-index: 50;
+    }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+    th { background: var(--slate-100); color: var(--slate-700); padding: 8px 10px; font-weight: 700; border-bottom: 1px solid var(--slate-200); }
+    td { padding: 8px 10px; border-bottom: 1px solid var(--slate-100); color: var(--slate-700); }
+    tr:hover td { background: var(--slate-50); }
+
+    footer {
+      max-width: 1200px;
+      margin: 40px auto 0;
+      text-align: center;
+      font-size: 12px;
+      color: var(--slate-500);
+      border-top: 1px solid var(--slate-200);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div>
+        <div class="badge">
+          Dataset Master 2022 - 2026 • 100% Autonome &amp; Hors-Ligne
+        </div>
+        <h1>Observatoire des Accords Professionnels &amp; Mobilités</h1>
+        <div class="header-sub">
+          Synthèse analytique des accords d'entreprise validés par IA (Jalons 1 à 3) &amp; données ouvertes DILA / Légifrance
+        </div>
+      </div>
+      <div class="header-box">
+        <div class="label">Périmètre consolidé</div>
+        <div class="val">198 497 Accords</div>
+        <div class="sub">54 793 Entreprises uniques</div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- 4 KPI Principaux -->
+    <section class="grid-4">
+      <div class="card kpi-card">
+        <div class="kpi-lbl">Volume Global d'Accords</div>
+        <div class="kpi-val">198 497</div>
+        <div class="kpi-sub"><strong>54 793</strong> entreprises • <strong>60 725</strong> sites (SIRET)</div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-lbl">Accords Mobilité Confirmés IA</div>
+        <div class="kpi-val" style="color: var(--emerald);">36 800</div>
+        <div class="kpi-sub">
+          <span class="kpi-tag tag-emerald">18,5 % du total</span> traitent de mobilités
+        </div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-lbl">Mise en place Forfait FMD / IKV</div>
+        <div class="kpi-val" style="color: var(--purple);">5 874</div>
+        <div class="kpi-sub">
+          <span class="kpi-tag tag-purple">16,0 % des accords mobilité</span> déploient l'IKV ou le FMD
+        </div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-lbl">Prise en Charge TC &gt; 50%</div>
+        <div class="kpi-val" style="color: var(--primary);">3 820</div>
+        <div class="kpi-sub">
+          <span class="kpi-tag tag-indigo">10,4 %</span> dépassent l'obligation légale
+        </div>
+      </div>
+    </section>
+
+    <!-- Mise en valeur des détections IA clés -->
+    <section class="card">
+      <div class="card-title">
+        <span>✨ Mesures &amp; Dispositifs Phares Détectés par l'Intelligence Artificielle</span>
+        <span style="font-size: 12px; font-weight: normal; color: var(--slate-500);">36 800 accords qualifiés</span>
+      </div>
+      <div class="grid-4" style="margin-top: 8px;">
+        <div class="highlight-card emerald">
+          <div style="font-size: 11px; font-weight: 700; color: var(--emerald); text-transform: uppercase;">Mobilités Durables Actées</div>
+          <div style="font-size: 24px; font-weight: 800; color: var(--slate-900); margin: 6px 0;">27 649 accords</div>
+          <div style="font-size: 11px; color: var(--slate-600);">
+            <strong>75,1 %</strong> des accords mobilité promeuvent activement les modes actifs, partagés ou collectifs.
+          </div>
+        </div>
+
+        <div class="highlight-card purple">
+          <div style="font-size: 11px; font-weight: 700; color: var(--purple); text-transform: uppercase;">Forfait Mobilités Durables &amp; IKV</div>
+          <div style="font-size: 24px; font-weight: 800; color: var(--slate-900); margin: 6px 0;">5 874 accords</div>
+          <div style="font-size: 11px; color: var(--slate-600);">
+            Adoption confirmée du <strong>Forfait Mobilités Durables</strong> ou de l'<strong>Indemnité Kilométrique Vélo</strong>.
+          </div>
+        </div>
+
+        <div class="highlight-card indigo">
+          <div style="font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase;">Transports Publics &gt; 50%</div>
+          <div style="font-size: 24px; font-weight: 800; color: var(--slate-900); margin: 6px 0;">3 820 accords</div>
+          <div style="font-size: 11px; color: var(--slate-600);">
+            Prise en charge employeur supérieure au seuil légal de 50% (taux rehaussé à <strong>60%, 75% ou 100%</strong>).
+          </div>
+        </div>
+
+        <div class="highlight-card cyan">
+          <div style="font-size: 11px; font-weight: 700; color: var(--cyan); text-transform: uppercase;">Aides Financières aux Trajets</div>
+          <div style="font-size: 24px; font-weight: 800; color: var(--slate-900); margin: 6px 0;">8 080 accords</div>
+          <div style="font-size: 11px; color: var(--slate-600);">
+            Primes transport, indemnités kilométriques spécifiques, chèques mobilité et cofinancements dédiés.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Répartition Entreprises & Territoire -->
+    <section class="grid-2">
+      <!-- Entreprises par taille -->
+      <div class="card">
+        <div class="card-title">
+          <span>🏢 Répartition par Taille d'Entreprise (INSEE)</span>
+          <span style="font-size: 12px; color: var(--slate-500);">54 793 entreprises</span>
+        </div>
+        <div style="margin-top: 10px;">
+          <div class="bar-item">
+            <div class="bar-header">
+              <span>Entreprises de Taille Intermédiaire (ETI)</span>
+              <span>82 823 accords (14 943 ent.) • 41,7%</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width: 41.7%; background: var(--primary);"></div></div>
+          </div>
+
+          <div class="bar-item">
+            <div class="bar-header">
+              <span>Petites &amp; Moyennes Entreprises (PME)</span>
+              <span>60 296 accords (30 341 ent.) • 30,4%</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width: 30.4%; background: var(--cyan);"></div></div>
+          </div>
+
+          <div class="bar-item">
+            <div class="bar-header">
+              <span>Grandes Entreprises (GE)</span>
+              <span>52 079 accords (7 374 ent.) • 26,2%</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width: 26.2%; background: var(--purple);"></div></div>
+          </div>
+
+          <div class="bar-item">
+            <div class="bar-header">
+              <span>Non renseigné</span>
+              <span>3 299 accords (2 135 ent.) • 1,7%</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width: 1.7%; background: var(--slate-500);"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Territoire IDF vs Régions -->
+      <div class="card">
+        <div class="card-title">
+          <span>🗺️ Répartition Territoriale &amp; Dynamique Mobilité</span>
+          <span style="font-size: 12px; color: var(--slate-500);">Île-de-France vs Régions</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px;">
+          <div style="padding: 14px; border-radius: var(--radius-md); background: var(--primary-bg); border: 1px solid #c7d2fe;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase;">Île-de-France (IDF)</div>
+            <div style="font-size: 22px; font-weight: 800; color: var(--slate-900); margin: 4px 0;">50 425 accords</div>
+            <div style="font-size: 11px; color: var(--slate-700);"><strong>25,4 %</strong> des accords nationaux</div>
+            <div style="font-size: 11px; color: var(--emerald); font-weight: 700; margin-top: 6px;">
+              ➔ 11 736 accords mobilité (23,3 %)
+            </div>
+          </div>
+
+          <div style="padding: 14px; border-radius: var(--radius-md); background: var(--slate-100); border: 1px solid var(--slate-200);">
+            <div style="font-size: 11px; font-weight: 700; color: var(--slate-700); text-transform: uppercase;">Hors Île-de-France</div>
+            <div style="font-size: 22px; font-weight: 800; color: var(--slate-900); margin: 4px 0;">147 689 accords</div>
+            <div style="font-size: 11px; color: var(--slate-700);"><strong>74,4 %</strong> des accords nationaux</div>
+            <div style="font-size: 11px; color: var(--primary); font-weight: 700; margin-top: 6px;">
+              ➔ 25 042 accords mobilité (17,0 %)
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 11px; color: var(--slate-500); margin-top: 10px; font-style: italic;">
+          * 383 accords non géolocalisés (0,2%). Le taux d'accord traitant de mobilité est +37% supérieur en Île-de-France.
+        </div>
+      </div>
+    </section>
+
+    <!-- Saisonnalité Graphique SVG Offline -->
+    <section class="card">
+      <div class="card-title">
+        <span>📈 Saisonnalité des Signatures d'Accords &amp; Dynamique Mensuelle des Mobilités</span>
+        <span style="font-size: 12px; color: var(--slate-500);">Données 2022 - 2026 (Mois 1 à 12)</span>
+      </div>
+      <div class="chart-container" id="seasonalityContainer"></div>
+      <div style="display: flex; gap: 20px; justify-content: center; font-size: 12px; margin-top: 12px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="width: 12px; height: 12px; background: #6366f1; border-radius: 2px;"></span>
+          <span>Volume Total d'Accords Signés</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="width: 12px; height: 12px; background: #10b981; border-radius: 2px;"></span>
+          <span>Accords Mobilité Confirmés IA</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="width: 16px; height: 3px; background: #d97706; display: inline-block;"></span>
+          <span>Part Mobilité (%)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Top 10 Mesures IDFM -->
+    <section class="card">
+      <div class="card-title">
+        <span>🏆 Top 10 des Mesures Référentiel IDFM Classifiées par l'IA</span>
+        <span style="font-size: 12px; color: var(--slate-500);">Fréquence parmi les 36 800 accords mobilité</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Rang</th>
+            <th>Mesure Référentiel IDFM</th>
+            <th style="text-align: right;">Nombre d'Accords</th>
+            <th style="text-align: right;">Part relative (%)</th>
+            <th style="width: 35%;">Intensité</th>
+          </tr>
+        </thead>
+        <tbody id="topMeasuresBody"></tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <footer>
+    Observatoire des Mobilités Professionnelles • Référentiel IDFM • Visualisation Autonome Hors-Ligne (Zero-Dependency)
+  </footer>
+
+  <div id="chartTooltip" class="tooltip"></div>
+
+  <script>
+    const seasonalityData = [
+      { m: "Janv", tot: 20835, mob: 4435, pct: 21.29 },
+      { m: "Févr", tot: 19281, mob: 4099, pct: 21.26 },
+      { m: "Mars", tot: 22343, mob: 4758, pct: 21.30 },
+      { m: "Avr",  tot: 16097, mob: 3110, pct: 19.32 },
+      { m: "Mai",  tot: 13965, mob: 2519, pct: 18.04 },
+      { m: "Juin", tot: 17523, mob: 3112, pct: 17.76 },
+      { m: "Juil", tot: 13048, mob: 2338, pct: 17.92 },
+      { m: "Août", tot: 4029,  mob: 576,  pct: 14.30 },
+      { m: "Sept", tot: 12198, mob: 1691, pct: 13.86 },
+      { m: "Oct",  tot: 13960, mob: 2048, pct: 14.67 },
+      { m: "Nov",  tot: 16613, mob: 2814, pct: 16.94 },
+      { m: "Déc",  tot: 28605, mob: 5300, pct: 18.53 }
+    ];
+
+    const measuresData = [
+      { name: "Organiser le télétravail et les horaires de travail", count: 15584, pct: 42.3 },
+      { name: "Rembourser les transports en commun", count: 8915, pct: 24.2 },
+      { name: "Déployer des dispositifs financiers d’aide à la mobilité", count: 8080, pct: 22.0 },
+      { name: "Mettre en place le forfait mobilité durable et l'indemnité kilométrique vélo IKV", count: 7373, pct: 20.0 },
+      { name: "Prendre en compte la mobilité des salariés", count: 5141, pct: 14.0 },
+      { name: "Promouvoir le covoiturage", count: 5040, pct: 13.7 },
+      { name: "Promouvoir le vélo", count: 4815, pct: 13.1 },
+      { name: "Organiser l’usage de la voiture et des deux-roues motorisés", count: 4169, pct: 11.3 },
+      { name: "Soutenir la transition énergétique du parc de véhicules", count: 2973, pct: 8.1 },
+      { name: "Organiser le stationnement des véhicules et des vélos", count: 2742, pct: 7.5 }
+    ];
+
+    function renderSeasonalityChart() {
+      const container = document.getElementById("seasonalityContainer");
+      const w = container.clientWidth || 900;
+      const h = container.clientHeight || 260;
+      const padLeft = 45, padRight = 45, padTop = 20, padBottom = 30;
+      const chartW = w - padLeft - padRight;
+      const chartH = h - padTop - padBottom;
+      const maxTot = 30000;
+
+      let svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" xmlns="http://www.w3.org/2000/svg">';
+
+      for (let i = 0; i <= 3; i++) {
+        const val = i * 10000;
+        const y = padTop + chartH - (val / maxTot) * chartH;
+        svg += '<line x1="' + padLeft + '" y1="' + y + '" x2="' + (w - padRight) + '" y2="' + y + '" stroke="#e2e8f0" stroke-dasharray="3,3" />';
+        svg += '<text x="' + (padLeft - 8) + '" y="' + (y + 4) + '" fill="#94a3b8" font-size="10" text-anchor="end">' + (val ? val/1000 + "k" : "0") + '</text>';
+      }
+
+      const barSlot = chartW / seasonalityData.length;
+      const barW = Math.min(barSlot * 0.35, 24);
+
+      let pointsLine = [];
+      seasonalityData.forEach(function(d, idx) {
+        const slotX = padLeft + idx * barSlot;
+        const xTot = slotX + barSlot * 0.25;
+        const xMob = xTot + barW + 2;
+
+        const hTot = (d.tot / maxTot) * chartH;
+        const yTot = padTop + chartH - hTot;
+
+        const hMob = (d.mob / maxTot) * chartH;
+        const yMob = padTop + chartH - hMob;
+
+        svg += '<rect x="' + xTot + '" y="' + yTot + '" width="' + barW + '" height="' + hTot + '" fill="#6366f1" rx="3" opacity="0.9" class="chart-bar" data-tip="' + d.m + ' : ' + d.tot.toLocaleString() + ' accords totaux" />';
+        svg += '<rect x="' + xMob + '" y="' + yMob + '" width="' + barW + '" height="' + hMob + '" fill="#10b981" rx="3" opacity="0.9" class="chart-bar" data-tip="' + d.m + ' : ' + d.mob.toLocaleString() + ' accords mobilité (' + d.pct + '%)" />';
+
+        svg += '<text x="' + (slotX + barSlot * 0.5) + '" y="' + (h - 8) + '" fill="#64748b" font-size="11" text-anchor="middle" font-weight="600">' + d.m + '</text>';
+
+        const yPct = padTop + chartH - ((d.pct - 10) / 15) * chartH;
+        pointsLine.push((slotX + barSlot * 0.5) + ',' + yPct);
+      });
+
+      svg += '<polyline fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="' + pointsLine.join(" ") + '" />';
+
+      seasonalityData.forEach(function(d, idx) {
+        const slotX = padLeft + idx * barSlot;
+        const yPct = padTop + chartH - ((d.pct - 10) / 15) * chartH;
+        svg += '<circle cx="' + (slotX + barSlot * 0.5) + '" cy="' + yPct + '" r="3.5" fill="#d97706" stroke="#fff" stroke-width="1.5" class="chart-dot" data-tip="' + d.m + ' : ' + d.pct + '% d'accords mobilité" />';
+      });
+
+      for (let p = 10; p <= 25; p += 5) {
+        const y = padTop + chartH - ((p - 10) / 15) * chartH;
+        svg += '<text x="' + (w - padRight + 8) + '" y="' + (y + 4) + '" fill="#d97706" font-size="10" text-anchor="start" font-weight="600">' + p + '%</text>';
+      }
+
+      svg += '</svg>';
+      container.innerHTML = svg;
+
+      const tooltip = document.getElementById("chartTooltip");
+      container.querySelectorAll(".chart-bar, .chart-dot").forEach(function(el) {
+        el.addEventListener("mouseenter", function(e) {
+          tooltip.innerText = el.getAttribute("data-tip");
+          tooltip.style.opacity = "1";
+        });
+        el.addEventListener("mousemove", function(e) {
+          const rect = container.getBoundingClientRect();
+          tooltip.style.left = (e.clientX - rect.left + 15) + "px";
+          tooltip.style.top = (e.clientY - rect.top - 20) + "px";
+        });
+        el.addEventListener("mouseleave", function() {
+          tooltip.style.opacity = "0";
+        });
+      });
+    }
+
+    function renderMeasuresTable() {
+      const tbody = document.getElementById("topMeasuresBody");
+      const maxCount = measuresData[0].count;
+      let html = "";
+      measuresData.forEach(function(m, i) {
+        const fillW = ((m.count / maxCount) * 100).toFixed(1);
+        html += '<tr>' +
+          '<td style="font-weight: 700; color: var(--slate-500); width: 40px;">#' + (i + 1) + '</td>' +
+          '<td style="font-weight: 600; color: var(--slate-900);">' + m.name + '</td>' +
+          '<td style="text-align: right; font-family: monospace; font-weight: 700; color: var(--primary);">' + m.count.toLocaleString("fr-FR") + '</td>' +
+          '<td style="text-align: right; font-family: monospace; color: var(--slate-600);">' + m.pct + '%</td>' +
+          '<td><div class="bar-bg" style="height: 7px;"><div class="bar-fill" style="width: ' + fillW + '%; background: linear-gradient(90deg, #6366f1, #4338ca);"></div></div></td>' +
+        '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    window.addEventListener("DOMContentLoaded", function() {
+      renderSeasonalityChart();
+      renderMeasuresTable();
+    });
+    window.addEventListener("resize", function() {
+      renderSeasonalityChart();
+    });
+  </script>
+</body>
+</html>

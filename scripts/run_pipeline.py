@@ -89,7 +89,7 @@ def run():
     batch_size = args.batch_size
 
     # Load .env file
-    load_dotenv(Path(__file__).parent.parent / ".env")
+    load_dotenv(Path(__file__).parent.parent / ".env", override=True)
 
     if args.update_referentiels:
         print("\n--- ACTUALISATION DES RÉFÉRENTIELS ---")
@@ -278,7 +278,10 @@ def run():
 
         # 1. Extraction
         if do_extract:
-            extraction.extract_archive(str(archive_path), str(extract_dir))
+            if metadata_with_context.exists():
+                print(f"✅ Contexte déjà prêt ({metadata_with_context.name}), extraction de l'archive sautée.")
+            else:
+                extraction.extract_archive(str(archive_path), str(extract_dir))
 
         # Recherche dynamique des dossiers XML et bureautique
         if extracted_base.exists():

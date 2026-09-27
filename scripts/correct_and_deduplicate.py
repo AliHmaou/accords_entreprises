@@ -101,14 +101,14 @@ def process_file(input_file: str, output_file: str):
     dir_name = os.path.dirname(output_file)
     if dir_name:
         os.makedirs(dir_name, exist_ok=True)
-    df.to_parquet(output_path)
+    df.to_parquet(output_file)
     
     print("4. Application du dédoublonnage métier...")
     deduplicate_parquet(output_file)
     
     con = duckdb.connect()
-    count_final = con.execute(f"SELECT count(*) FROM '{output_path}'").fetchone()[0]
-    distinct_vals = con.execute(f"SELECT DISTINCT mesures_ref_idfm FROM '{output_path}' ORDER BY 1").fetchall()
+    count_final = con.execute(f"SELECT count(*) FROM '{output_file}'").fetchone()[0]
+    distinct_vals = con.execute(f"SELECT DISTINCT mesures_ref_idfm FROM '{output_file}' ORDER BY 1").fetchall()
     
     print("\nValeurs distinctes dans mesures_ref_idfm :")
     for val in distinct_vals:

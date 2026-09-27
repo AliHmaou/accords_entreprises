@@ -26,7 +26,7 @@ type TabType = 'stats' | 'measures' | 'map' | 'live_sql' | 'about_data' | 'about
 // Type for the location filter item
 interface LocationItem {
     name: string;
-    type: 'Région' | 'EPCI' | 'Commune';
+    type: 'Région' | 'Département' | 'EPCI' | 'EPT' | 'Commune';
 }
 
 const Dashboard: React.FC = () => {
@@ -69,7 +69,7 @@ const Dashboard: React.FC = () => {
 
     // Filters States
     const [searchId, setSearchId] = useState<string>('');
-    const [selectedYear, setSelectedYear] = useState<string>('');
+    const [selectedYears, setSelectedYears] = useState<number[]>([]);
     const [years, setYears] = useState<number[]>([]);
 
     // Sorting States
@@ -87,11 +87,15 @@ const Dashboard: React.FC = () => {
         const sectorList = sectorResult.map((r: any) => r.SECTEUR).filter(Boolean);
         setSectors(sectorList);
 
-        // 2. Options géographiques (Régions, EPCI)
+        // 2. Options géographiques (Régions, Départements, EPCI, EPT)
         const geoQuery = `
             SELECT DISTINCT localisation_region_nom as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region_nom IS NOT NULL
             UNION
+            SELECT DISTINCT (localisation_departement_nom || ' (' || coalesce(localisation_departement_code, '') || ')') as name, 'Département' as type FROM ${TABLE_NAME} WHERE localisation_departement_nom IS NOT NULL
+            UNION
             SELECT DISTINCT localisation_epci_nom as name, 'EPCI' as type FROM ${TABLE_NAME} WHERE localisation_epci_nom IS NOT NULL
+            UNION
+            SELECT DISTINCT localisation_ept_nom as name, 'EPT' as type FROM ${TABLE_NAME} WHERE localisation_ept_nom IS NOT NULL
             ORDER BY name
         `;
         const geoResult = await runQuery(geoQuery);
@@ -207,15 +211,26 @@ const Dashboard: React.FC = () => {
                 query += ` AND SECTEUR IN (${sectorList})`;
             }
 
-            // Location Chips Filter (Hybrid: Region OR EPCI)
+            // Location Chips Filter (Hybrid: Region, Département, EPCI, EPT)
             if (selectedLocations.length > 0) {
                 const conditions: string[] = [];
                 selectedLocations.forEach(loc => {
                     const safeName = loc.name.replace(/'/g, "''");
                     if (loc.type === 'Région') {
                         conditions.push(`localisation_region_nom = '${safeName}'`);
+                    } else if (loc.type === 'Département') {
+                        const deptMatch = loc.name.match(/^(.*?)(?:\s*\((.*?)\))?$/);
+                        const deptNom = (deptMatch ? deptMatch[1] : loc.name).trim().replace(/'/g, "''");
+                        const deptCode = deptMatch && deptMatch[2] ? deptMatch[2].trim().replace(/'/g, "''") : '';
+                        if (deptCode) {
+                            conditions.push(`(localisation_departement_nom = '${deptNom}' OR localisation_departement_code = '${deptCode}')`);
+                        } else {
+                            conditions.push(`localisation_departement_nom = '${deptNom}'`);
+                        }
                     } else if (loc.type === 'EPCI') {
                         conditions.push(`localisation_epci_nom = '${safeName}'`);
+                    } else if (loc.type === 'EPT') {
+                        conditions.push(`localisation_ept_nom = '${safeName}'`);
                     }
                 });
                 if (conditions.length > 0) {
@@ -254,9 +269,9 @@ const Dashboard: React.FC = () => {
                 query += ` AND lower(ID) LIKE '%${idTerm}%'`;
             }
 
-            // Year Filter (filtrage sur l'année de signature issue de DATE_TEXTE)
-            if (selectedYear) {
-                query += ` AND EXTRACT(YEAR FROM CAST(DATE_TEXTE AS DATE)) = ${selectedYear}`;
+            // Year Filter (filtrage multiple sur l'année de signature issue de DATE_TEXTE)
+            if (selectedYears.length > 0) {
+                query += ` AND EXTRACT(YEAR FROM CAST(DATE_TEXTE AS DATE)) IN (${selectedYears.join(', ')})`;
             }
 
             try {
@@ -282,7 +297,7 @@ const Dashboard: React.FC = () => {
             isCancelled = true;
             clearTimeout(timer);
         };
-    }, [globalSearch, measureSearch, selectedSectors, selectedLocations, onlyMobiliteIA, onlyIDF, ignoreRevendications, onlyFmdIkv, onlyEffortRemboursement, searchId, selectedYear, dbReady]);
+    }, [globalSearch, measureSearch, selectedSectors, selectedLocations, onlyMobiliteIA, onlyIDF, ignoreRevendications, onlyFmdIkv, onlyEffortRemboursement, searchId, selectedYears, dbReady]);
 
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -305,11 +320,15 @@ const Dashboard: React.FC = () => {
                 const sectorList = sectorResult.map((r: any) => r.SECTEUR).filter(Boolean);
                 setSectors(sectorList);
 
-                // Refresh Geo options
+                // Refresh Geo options (Régions, Départements, EPCI, EPT)
                 const geoQuery = `
                     SELECT DISTINCT localisation_region_nom as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region_nom IS NOT NULL
                     UNION
+                    SELECT DISTINCT (localisation_departement_nom || ' (' || coalesce(localisation_departement_code, '') || ')') as name, 'Département' as type FROM ${TABLE_NAME} WHERE localisation_departement_nom IS NOT NULL
+                    UNION
                     SELECT DISTINCT localisation_epci_nom as name, 'EPCI' as type FROM ${TABLE_NAME} WHERE localisation_epci_nom IS NOT NULL
+                    UNION
+                    SELECT DISTINCT localisation_ept_nom as name, 'EPT' as type FROM ${TABLE_NAME} WHERE localisation_ept_nom IS NOT NULL
                     ORDER BY name
                 `;
                 const geoResult = await runQuery(geoQuery);
@@ -319,6 +338,7 @@ const Dashboard: React.FC = () => {
                 setMeasureSearch('');
                 setSelectedSectors([]);
                 setSelectedLocations([]);
+                setSelectedYears([]);
                 setDbReady(true);
                 
             } catch (error) {
@@ -366,7 +386,9 @@ const Dashboard: React.FC = () => {
     const getBadgeColor = (type: string) => {
         switch(type) {
             case 'Région': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+            case 'Département': return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200';
             case 'EPCI': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+            case 'EPT': return 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200';
             case 'Commune': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
             default: return 'bg-gray-100 text-gray-800';
         }
@@ -1105,23 +1127,59 @@ const Dashboard: React.FC = () => {
                         </select>
                     </div>
 
-                    {/* Année de signature de l'accord (Menu déroulant DATE_TEXTE) */}
+                    {/* Année de signature de l'accord (Sélection multiple DATE_TEXTE) */}
                     <div className="lg:col-span-3">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
-                            Année de signature
-                        </label>
-                        <select
-                            value={selectedYear}
-                            onChange={e => setSelectedYear(e.target.value)}
-                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
-                        >
-                            <option value="">Toutes les années ({years.length})</option>
-                            {years.map((y) => (
-                                <option key={y} value={y}>
-                                    {y}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">
+                                Année(s) de signature
+                            </label>
+                            {selectedYears.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedYears([])}
+                                    className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                                >
+                                    Toutes ({selectedYears.length} sélec.)
+                                </button>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap gap-1 p-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md min-h-[38px] items-center">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedYears([])}
+                                className={`px-2 py-1 rounded text-xs font-medium transition ${
+                                    selectedYears.length === 0
+                                        ? 'bg-indigo-600 text-white shadow-xs'
+                                        : 'bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500'
+                                }`}
+                            >
+                                Toutes
+                            </button>
+                            {years.map((y) => {
+                                const isSelected = selectedYears.includes(y);
+                                return (
+                                    <button
+                                        key={y}
+                                        type="button"
+                                        onClick={() => {
+                                            if (isSelected) {
+                                                setSelectedYears(selectedYears.filter(yr => yr !== y));
+                                            } else {
+                                                setSelectedYears([...selectedYears, y].sort((a, b) => b - a));
+                                            }
+                                        }}
+                                        className={`px-2 py-1 rounded text-xs font-medium transition flex items-center gap-1 ${
+                                            isSelected
+                                                ? 'bg-indigo-600 text-white shadow-xs'
+                                                : 'bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500'
+                                        }`}
+                                    >
+                                        {y}
+                                        {isSelected && <span className="text-[10px] leading-none opacity-80">✕</span>}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
@@ -1131,7 +1189,7 @@ const Dashboard: React.FC = () => {
                     {/* Geo Location Filter */}
                     <div className="md:col-span-9 relative" ref={geoWrapperRef}>
                         <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
-                            Territoire (Région, EPCI, EPT)
+                            Territoire (Région, Département, EPCI, EPT)
                         </label>
                         <input
                             type="text"
@@ -1142,7 +1200,7 @@ const Dashboard: React.FC = () => {
                             }}
                             onFocus={() => setShowGeoSuggestions(true)}
                             className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
-                            placeholder={selectedLocations.length > 0 ? "Ajouter un lieu..." : "Rechercher une région, un EPCI ou un EPT (ex: Grand Paris, Métropole de Lyon)..."}
+                            placeholder={selectedLocations.length > 0 ? "Ajouter un territoire..." : "Rechercher une région, un département, un EPCI ou un EPT (ex: 75, Hauts-de-Seine, Grand Paris)..."}
                         />
                         {showGeoSuggestions && geoInput && (
                             <ul className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
@@ -1185,7 +1243,7 @@ const Dashboard: React.FC = () => {
 
                     {/* Reset Button */}
                     <div className="md:col-span-3 flex items-end">
-                        {(globalSearch || measureSearch || selectedSectors.length > 0 || selectedLocations.length > 0 || selectedYear || onlyMobiliteIA || onlyIDF || ignoreRevendications || onlyFmdIkv || onlyEffortRemboursement) && (
+                        {(globalSearch || measureSearch || selectedSectors.length > 0 || selectedLocations.length > 0 || selectedYears.length > 0 || onlyMobiliteIA || onlyIDF || ignoreRevendications || onlyFmdIkv || onlyEffortRemboursement) && (
                             <button
                                 type="button"
                                 onClick={() => {
@@ -1193,7 +1251,7 @@ const Dashboard: React.FC = () => {
                                     setMeasureSearch('');
                                     setSelectedSectors([]);
                                     setSelectedLocations([]);
-                                    setSelectedYear('');
+                                    setSelectedYears([]);
                                     setOnlyMobiliteIA(false);
                                     setOnlyIDF(false);
                                     setIgnoreRevendications(false);
