@@ -278,6 +278,17 @@ def run_enrichment_for_scope(scope: str, limit: int = None, upload: bool = False
     df_enriched.to_parquet(out_path, index=False)
     print(f"\n✅ Parquet enrichi sauvegardé : {out_path} ({out_path.stat().st_size / (1024*1024):.2f} Mo)")
 
+    out_idf_path = None
+    if scope == "national":
+        mask_idf = (
+            (df_enriched["localisation_region_code"] == "11") | 
+            (df_enriched["localisation_region_nom"].astype(str).str.contains("Ile-de-France|Île-de-France", case=False, na=False))
+        )
+        df_idf = df_enriched[mask_idf].copy()
+        out_idf_path = BASE_DIR / "data/outputs/IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION_IDF.parquet"
+        df_idf.to_parquet(out_idf_path, index=False)
+        print(f"✅ Déclinaison IDF extraite et sauvegardée : {out_idf_path} ({len(df_idf):,} lignes, {out_idf_path.stat().st_size / (1024*1024):.2f} Mo)")
+
     if upload:
         repo_id = os.getenv("HF_REPO_ID", "alihmaou/ACCO_ACCORDS_PROFESSIONNELS_MOBILITES")
         hf_token = os.getenv("HF_TOKEN")
@@ -286,6 +297,9 @@ def run_enrichment_for_scope(scope: str, limit: int = None, upload: bool = False
             from upload_hf import upload_to_huggingface
             print(f"🤗 Upload Hugging Face vers {repo_id}/{out_filename}...")
             upload_to_huggingface(str(out_path), repo_id, hf_token, out_filename)
+            if scope == "national" and out_idf_path:
+                print(f"🤗 Upload Hugging Face vers {repo_id}/IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION_IDF.parquet...")
+                upload_to_huggingface(str(out_idf_path), repo_id, hf_token, "IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION_IDF.parquet")
         else:
             print("⚠️ HF_TOKEN manquant dans .env, upload ignoré.")
 
