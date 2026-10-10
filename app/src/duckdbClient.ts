@@ -1,4 +1,5 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
+import { DUCKDB_CODE_SECTION_NAF_CASE, DUCKDB_SECTION_NAF_CASE } from './nafConstants';
 
 let db: duckdb.AsyncDuckDB | null = null;
 let conn: duckdb.AsyncDuckDBConnection | null = null;
@@ -26,6 +27,25 @@ export const initDuckDB = async () => {
     return { db, conn };
 };
 
+export const enrichWithNafSections = async (tableName: string) => {
+    if (!conn) return;
+    try {
+        console.time(`🦆 [DuckDB] Enrichissement NAF pour ${tableName}`);
+        await conn.query(`ALTER TABLE ${tableName} ADD COLUMN IF NOT EXISTS CODE_SECTION_NAF VARCHAR`);
+        await conn.query(`ALTER TABLE ${tableName} ADD COLUMN IF NOT EXISTS SECTION_NAF VARCHAR`);
+        await conn.query(`
+            UPDATE ${tableName} SET 
+                CODE_SECTION_NAF = ${DUCKDB_CODE_SECTION_NAF_CASE},
+                SECTION_NAF = ${DUCKDB_SECTION_NAF_CASE}
+            WHERE SECTION_NAF IS NULL
+        `);
+        console.timeEnd(`🦆 [DuckDB] Enrichissement NAF pour ${tableName}`);
+        console.log(`🦆 [DuckDB] Table ${tableName} enrichie avec les sections NAF.`);
+    } catch (e) {
+        console.warn("🦆 [DuckDB] Impossible d'enrichir avec les sections NAF:", e);
+    }
+};
+
 export const loadParquetFile = async (tableName: string, url: string) => {
     if (!conn || !db) throw new Error("DuckDB not initialized");
 
@@ -39,6 +59,9 @@ export const loadParquetFile = async (tableName: string, url: string) => {
     await conn.query(`CREATE OR REPLACE TABLE ${tableName} AS SELECT * FROM read_parquet('${tableName}.parquet')`);
 
     console.timeEnd(`🦆 [DuckDB] Téléchargement et création table ${tableName}`);
+
+    // Enrich with NAF macro-sections (A à U)
+    await enrichWithNafSections(tableName);
     
     const countResult = await conn.query(`SELECT COUNT(*) as count FROM ${tableName}`);
     const count = countResult.toArray()[0].count; // Access safely based on Arrow structure
@@ -57,6 +80,9 @@ export const loadJsonJSONL = async (tableName: string, jsonContent: string) => {
     await conn.query(`CREATE OR REPLACE TABLE ${tableName} AS SELECT * FROM read_json_auto('${tableName}.json')`);
     
     console.timeEnd(`🦆 [DuckDB] Parsing JSONL vers ${tableName}`);
+
+    // Enrich with NAF macro-sections (A à U)
+    await enrichWithNafSections(tableName);
     
     const countResult = await conn.query(`SELECT COUNT(*) as count FROM ${tableName}`);
     // Handle Arrow structural typing loosely here for display

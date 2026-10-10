@@ -182,9 +182,14 @@ const AboutData: React.FC = () => {
                 <td className="p-3 italic">Date de dépôt légal et publication DILA.</td>
             </tr>
             <tr>
+                <td className="p-3 font-mono text-indigo-600">SECTION_NAF</td>
+                <td className="p-3">Section NAF (Macro-secteur)</td>
+                <td className="p-3 italic">Regroupement officiel Insee en 21 sections (A à U) déduit du code APE (ex : C - Industrie manufacturière, H - Transports et entreposage).</td>
+            </tr>
+            <tr>
                 <td className="p-3 font-mono text-indigo-600">SECTEUR</td>
-                <td className="p-3">Secteur d'activité</td>
-                <td className="p-3 italic">Libellé clair du secteur économique de l'entreprise.</td>
+                <td className="p-3">Sous-secteur d'activité</td>
+                <td className="p-3 italic">Libellé fin de sous-classe économique de l'entreprise (issu du code APE).</td>
             </tr>
             <tr>
                 <td className="p-3 font-mono text-indigo-600">categorie_entreprise</td>

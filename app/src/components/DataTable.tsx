@@ -121,10 +121,10 @@ const DataTable: React.FC<DataTableProps> = ({
                             </th>
                             <th 
                                 scope="col" 
-                                className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[15%] cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-600"
-                                onClick={() => onSort?.('SECTEUR')}
+                                className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-[18%] cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-600"
+                                onClick={() => onSort?.(sortField === 'SECTION_NAF' ? 'SECTEUR' : 'SECTION_NAF')}
                             >
-                                Secteur <SortIndicator field="SECTEUR" currentField={sortField} order={sortOrder} />
+                                Secteur (NAF) <SortIndicator field={sortField === 'SECTEUR' ? 'SECTEUR' : 'SECTION_NAF'} currentField={sortField} order={sortOrder} />
                             </th>
                             <th 
                                 scope="col" 
@@ -175,7 +175,14 @@ const DataTable: React.FC<DataTableProps> = ({
                                     {isMobility && <span title="Mobilité Durable"><LeafIcon /></span>}
                                 </td>
                                 <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                                    <div className="line-clamp-2 leading-snug">{agreement.SECTEUR}</div>
+                                    <div className="font-semibold text-gray-900 dark:text-gray-200 line-clamp-1 leading-snug text-xs" title={agreement.SECTION_NAF || agreement.SECTEUR}>
+                                        {agreement.SECTION_NAF || agreement.SECTEUR}
+                                    </div>
+                                    {agreement.SECTEUR && agreement.SECTION_NAF && (
+                                        <div className="text-[11px] text-gray-400 dark:text-gray-500 line-clamp-1 mt-0.5" title={`${agreement.SECTEUR} (Code APE: ${agreement.CODE_APE})`}>
+                                            {agreement.SECTEUR}
+                                        </div>
+                                    )}
                                 </td>
                                 <td className="px-4 py-3">
                                     <div className="flex flex-col space-y-1">

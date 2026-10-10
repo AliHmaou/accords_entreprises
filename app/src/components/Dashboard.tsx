@@ -50,9 +50,11 @@ const Dashboard: React.FC = () => {
     const [onlyFmdIkv, setOnlyFmdIkv] = useState(false);
     const [onlyEffortRemboursement, setOnlyEffortRemboursement] = useState(false);
     
-    // Sector State
-    const [sectors, setSectors] = useState<string[]>([]);
-    const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
+    // Sector State (Section NAF macro + sous-secteur fin)
+    const [sectionsNaf, setSectionsNaf] = useState<string[]>([]);
+    const [selectedSectionNaf, setSelectedSectionNaf] = useState<string>('');
+    const [subSectors, setSubSectors] = useState<string[]>([]);
+    const [selectedSubSector, setSelectedSubSector] = useState<string>('');
 
     // Geographic Filter State
     const [geoOptions, setGeoOptions] = useState<LocationItem[]>([]);
@@ -82,10 +84,15 @@ const Dashboard: React.FC = () => {
 
     // Fonction réutilisable pour alimenter les listes déroulantes de filtres depuis DuckDB
     const loadOptionsFromDB = async () => {
-        // 1. Secteurs d'activité
-        const sectorResult = await runQuery(`SELECT DISTINCT SECTEUR FROM ${TABLE_NAME} WHERE SECTEUR IS NOT NULL ORDER BY SECTEUR`);
-        const sectorList = sectorResult.map((r: any) => r.SECTEUR).filter(Boolean);
-        setSectors(sectorList);
+        // 1. Sections NAF (21 macro-secteurs Insee A à U)
+        const nafResult = await runQuery(`SELECT DISTINCT SECTION_NAF FROM ${TABLE_NAME} WHERE SECTION_NAF IS NOT NULL AND SECTION_NAF != 'Non renseigné' ORDER BY SECTION_NAF`);
+        const nafList = nafResult.map((r: any) => r.SECTION_NAF).filter(Boolean);
+        setSectionsNaf(nafList);
+
+        // 1b. Sous-secteurs précis d'activité
+        const subSectorResult = await runQuery(`SELECT DISTINCT SECTEUR FROM ${TABLE_NAME} WHERE SECTEUR IS NOT NULL ORDER BY SECTEUR`);
+        const subSectorList = subSectorResult.map((r: any) => r.SECTEUR).filter(Boolean);
+        setSubSectors(subSectorList);
 
         // 2. Options géographiques (Régions, Départements, EPCI, EPT)
         const geoQuery = `
@@ -125,6 +132,24 @@ const Dashboard: React.FC = () => {
             setAvailableMeasures(measureList);
         }
     };
+
+    // Mise à jour dynamique des sous-secteurs selon la Section NAF choisie
+    useEffect(() => {
+        if (!dbReady) return;
+        const updateSubSectors = async () => {
+            if (selectedSectionNaf) {
+                const safeSection = selectedSectionNaf.replace(/'/g, "''");
+                const res = await runQuery(`SELECT DISTINCT SECTEUR FROM ${TABLE_NAME} WHERE SECTION_NAF = '${safeSection}' AND SECTEUR IS NOT NULL ORDER BY SECTEUR`);
+                const list = res.map((r: any) => r.SECTEUR).filter(Boolean);
+                setSubSectors(list);
+            } else {
+                const res = await runQuery(`SELECT DISTINCT SECTEUR FROM ${TABLE_NAME} WHERE SECTEUR IS NOT NULL ORDER BY SECTEUR`);
+                const list = res.map((r: any) => r.SECTEUR).filter(Boolean);
+                setSubSectors(list);
+            }
+        };
+        updateSubSectors();
+    }, [selectedSectionNaf, dbReady]);
 
     // Bascule de périmètre (Île-de-France rapide vs France entière)
     const switchDataset = async (targetScope: 'IDF' | 'FRANCE') => {
@@ -205,10 +230,16 @@ const Dashboard: React.FC = () => {
                 )`;
             }
 
-            // Sector Chips Filter (OR logic inside chips, but AND logic with other filters)
-            if (selectedSectors.length > 0) {
-                const sectorList = selectedSectors.map(s => `'${s.replace(/'/g, "''")}'`).join(',');
-                query += ` AND SECTEUR IN (${sectorList})`;
+            // Section NAF Macro Filter (A à U)
+            if (selectedSectionNaf) {
+                const safeSection = selectedSectionNaf.replace(/'/g, "''");
+                query += ` AND SECTION_NAF = '${safeSection}'`;
+            }
+
+            // Sub-Sector Detailed Filter
+            if (selectedSubSector) {
+                const safeSub = selectedSubSector.replace(/'/g, "''");
+                query += ` AND SECTEUR = '${safeSub}'`;
             }
 
             // Location Chips Filter (Hybrid: Region, Département, EPCI, EPT)
@@ -297,7 +328,7 @@ const Dashboard: React.FC = () => {
             isCancelled = true;
             clearTimeout(timer);
         };
-    }, [globalSearch, measureSearch, selectedSectors, selectedLocations, onlyMobiliteIA, onlyIDF, ignoreRevendications, onlyFmdIkv, onlyEffortRemboursement, searchId, selectedYears, dbReady]);
+    }, [globalSearch, measureSearch, selectedSectionNaf, selectedSubSector, selectedLocations, onlyMobiliteIA, onlyIDF, ignoreRevendications, onlyFmdIkv, onlyEffortRemboursement, searchId, selectedYears, dbReady]);
 
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -315,10 +346,14 @@ const Dashboard: React.FC = () => {
             try {
                 await loadJsonJSONL(TABLE_NAME, text);
                 
-                // Refresh filters list
-                const sectorResult = await runQuery(`SELECT DISTINCT SECTEUR FROM ${TABLE_NAME} ORDER BY SECTEUR`);
-                const sectorList = sectorResult.map((r: any) => r.SECTEUR).filter(Boolean);
-                setSectors(sectorList);
+                // Refresh sections NAF & sub-sectors list
+                const nafResult = await runQuery(`SELECT DISTINCT SECTION_NAF FROM ${TABLE_NAME} WHERE SECTION_NAF IS NOT NULL AND SECTION_NAF != 'Non renseigné' ORDER BY SECTION_NAF`);
+                const nafList = nafResult.map((r: any) => r.SECTION_NAF).filter(Boolean);
+                setSectionsNaf(nafList);
+
+                const subSectorResult = await runQuery(`SELECT DISTINCT SECTEUR FROM ${TABLE_NAME} WHERE SECTEUR IS NOT NULL ORDER BY SECTEUR`);
+                const subSectorList = subSectorResult.map((r: any) => r.SECTEUR).filter(Boolean);
+                setSubSectors(subSectorList);
 
                 // Refresh Geo options (Régions, Départements, EPCI, EPT)
                 const geoQuery = `
@@ -1105,26 +1140,62 @@ const Dashboard: React.FC = () => {
                         </select>
                     </div>
 
-                    {/* Secteur d'activité (Menu déroulant intuitif) */}
+                    {/* Secteur d'activité macro (Section NAF Insee A à U) & Sous-secteur */}
                     <div className="lg:col-span-3">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
-                            Secteur d'activité
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">
+                                Secteur (Section NAF)
+                            </label>
+                            {selectedSectionNaf && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSelectedSectionNaf('');
+                                        setSelectedSubSector('');
+                                    }}
+                                    className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                                >
+                                    Effacer
+                                </button>
+                            )}
+                        </div>
                         <select
-                            value={selectedSectors[0] || ""}
+                            value={selectedSectionNaf}
                             onChange={e => {
                                 const val = e.target.value;
-                                setSelectedSectors(val ? [val] : []);
+                                setSelectedSectionNaf(val);
+                                setSelectedSubSector('');
                             }}
                             className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
                         >
-                            <option value="">Tous les secteurs ({sectors.length})</option>
-                            {sectors.map((sector) => (
-                                <option key={sector} value={sector}>
-                                    {sector}
+                            <option value="">Toutes les sections NAF ({sectionsNaf.length})</option>
+                            {sectionsNaf.map((sec) => (
+                                <option key={sec} value={sec}>
+                                    {sec}
                                 </option>
                             ))}
                         </select>
+
+                        {/* Sous-secteur d'activité détaillé en cascade */}
+                        {selectedSectionNaf && subSectors.length > 0 && (
+                            <div className="mt-2">
+                                <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">
+                                    ↳ Sous-secteur précis ({subSectors.length}) :
+                                </label>
+                                <select
+                                    value={selectedSubSector}
+                                    onChange={e => setSelectedSubSector(e.target.value)}
+                                    className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 text-xs bg-gray-50 dark:bg-gray-700/80 text-gray-900 dark:text-gray-200 py-1.5 px-2.5"
+                                >
+                                    <option value="">Tous les sous-secteurs ({subSectors.length})</option>
+                                    {subSectors.map((sub) => (
+                                        <option key={sub} value={sub}>
+                                            {sub}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     {/* Année de signature de l'accord (Sélection multiple DATE_TEXTE) */}
@@ -1243,13 +1314,14 @@ const Dashboard: React.FC = () => {
 
                     {/* Reset Button */}
                     <div className="md:col-span-3 flex items-end">
-                        {(globalSearch || measureSearch || selectedSectors.length > 0 || selectedLocations.length > 0 || selectedYears.length > 0 || onlyMobiliteIA || onlyIDF || ignoreRevendications || onlyFmdIkv || onlyEffortRemboursement) && (
+                        {(globalSearch || measureSearch || selectedSectionNaf || selectedSubSector || selectedLocations.length > 0 || selectedYears.length > 0 || onlyMobiliteIA || onlyIDF || ignoreRevendications || onlyFmdIkv || onlyEffortRemboursement) && (
                             <button
                                 type="button"
                                 onClick={() => {
                                     setGlobalSearch('');
                                     setMeasureSearch('');
-                                    setSelectedSectors([]);
+                                    setSelectedSectionNaf('');
+                                    setSelectedSubSector('');
                                     setSelectedLocations([]);
                                     setSelectedYears([]);
                                     setOnlyMobiliteIA(false);

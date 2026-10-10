@@ -3,7 +3,7 @@ import { runQuery } from '../duckdbClient';
 
 const EXAMPLE_QUERIES = [
     `SELECT COUNT(*) as total FROM agreements`,
-    `SELECT SECTEUR, COUNT(*) as nb\nFROM agreements\nGROUP BY SECTEUR\nORDER BY nb DESC\nLIMIT 10`,
+    `SELECT SECTION_NAF, COUNT(*) as nb\nFROM agreements\nWHERE SECTION_NAF IS NOT NULL\nGROUP BY SECTION_NAF\nORDER BY nb DESC`,
     `SELECT RAISON_SOCIALE, DATE_DEPOT, TITRE_TXT\nFROM agreements\nLIMIT 20`,
     `SELECT localisation_region_nom, COUNT(*) as nb\nFROM agreements\nGROUP BY localisation_region_nom\nORDER BY nb DESC`,
     `SELECT mesure_extraite, COUNT(*) as nb\nFROM agreements\nWHERE mesure_extraite IS NOT NULL\nGROUP BY mesure_extraite\nORDER BY nb DESC\nLIMIT 15`,

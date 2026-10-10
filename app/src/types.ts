@@ -13,6 +13,8 @@ export interface Agreement {
   DATE_EFFET: string;
   DATE_FIN: string;
   CODE_APE: string;
+  CODE_SECTION_NAF?: string;     // Section NAF Insee (A à U)
+  SECTION_NAF?: string;          // Libellé officiel macro-secteur (ex: 'H - Transports et entreposage')
   SECTEUR: string;
   SYNDICATS: string;
   DOCUMENT_BUREAUTIQUE: string;

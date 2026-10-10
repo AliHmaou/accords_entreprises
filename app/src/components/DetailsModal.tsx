@@ -204,6 +204,11 @@ const DetailsModal = ({ agreement, onClose, highlightTerm }: DetailsModalProps) 
                                 🌿 Mobilités Durables
                             </span>
                         )}
+                        {agreement.SECTION_NAF && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                🏷️ {agreement.SECTION_NAF}
+                            </span>
+                        )}
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                              {agreement.SECTEUR}
                         </span>
