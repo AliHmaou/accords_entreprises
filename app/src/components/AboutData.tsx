@@ -217,6 +217,16 @@ const AboutData: React.FC = () => {
                 <td className="p-3 italic">Nom de l'EPT francilien (T1 à T12) (ex : Grand-Orly Seine Bièvre).</td>
             </tr>
             <tr>
+                <td className="p-3 font-mono text-indigo-600">est_prime_carburant</td>
+                <td className="p-3">Prime carburant accordée</td>
+                <td className="p-3 italic">Indicateur booléen (Oui/Non) confirmant la mise à disposition ou l'augmentation d'une prime carburant / chèque carburant employeur pour les trajets domicile-travail.</td>
+            </tr>
+            <tr>
+                <td className="p-3 font-mono text-indigo-600">est_infra_velo</td>
+                <td className="p-3">Infrastructures vélo disponibles</td>
+                <td className="p-3 italic">Indicateur booléen (Oui/Non) confirmant l'aménagement d'équipements ou infrastructures vélo (abris sécurisés, arceaux, douches, casiers, bornes de recharge VAE, etc.).</td>
+            </tr>
+            <tr>
                 <td className="p-3 font-mono text-indigo-600">mesure_extraite</td>
                 <td className="p-3">Synthèse sémantique</td>
                 <td className="p-3 italic">Mesures concrètes rédigées de façon synthétique par l'IA.</td>

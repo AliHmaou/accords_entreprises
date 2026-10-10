@@ -134,4 +134,27 @@ file_path = 'data/outputs/IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATIO
 upload_to_huggingface(file_path, repo, token, 'IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet')
 "
 ```
+
+---
+
+## 8. 🔍 Inférence Ad Hoc de Nouveaux Insights (`scripts/infer_ad_hoc_insights.py`)
+
+Ce script permet d'extraire de nouveaux champs métiers directement depuis les fichiers Parquet Hugging Face complets de référence **sans rouvrir les archives brutes ni réanalyser l'intégralité du corpus** :
+1. **`est_prime_carburant`** : `"Oui"` / `"Non"` (Prime carburant accordée / revalorisée).
+2. **`est_infra_velo`** : `"Oui"` / `"Non"` (Infrastructures et équipements matériels vélo).
+3. **`moyens_materiels`** : Enrichi dynamiquement avec les équipements vélo extraits (liste ouverte : abris sécurisés, arceaux, douches, vestiaires, casiers, bornes de recharge VAE, stations de gonflage/réparation, etc.).
+
+### Utilisation :
+```bash
+# 1. Test pilote rapide (ex: 10 chunks) sur l'Île-de-France
+python scripts/infer_ad_hoc_insights.py --scope idf --limit 10
+
+# 2. Exécution complète en tâche de fond sur l'Île-de-France (~2h, 814 batchs) avec upload automatique
+nohup python3 -u scripts/infer_ad_hoc_insights.py --scope idf --upload > infer_adhoc_idf.log 2>&1 &
+
+# 3. Exécution complète en tâche de fond sur le National (~6h, 2 472 batchs) avec upload automatique
+nohup python3 -u scripts/infer_ad_hoc_insights.py --scope national --upload > infer_adhoc_national.log 2>&1 &
+```
+* **Résilience** : Enregistre un checkpoint JSON dans `data/outputs/interim/ad_hoc_insights_checkpoint.json` toutes les 20 itérations. Si interrompu, relancer la commande reprendra exactement là où elle s'était arrêtée.
+
 Le dashboard en ligne prend automatiquement en compte le nouveau jeu de données à jour.

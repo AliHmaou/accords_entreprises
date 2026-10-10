@@ -49,6 +49,8 @@ const Dashboard: React.FC = () => {
     const [ignoreRevendications, setIgnoreRevendications] = useState(false);
     const [onlyFmdIkv, setOnlyFmdIkv] = useState(false);
     const [onlyEffortRemboursement, setOnlyEffortRemboursement] = useState(false);
+    const [onlyPrimeCarburant, setOnlyPrimeCarburant] = useState(false);
+    const [onlyInfraVelo, setOnlyInfraVelo] = useState(false);
     
     // Sector State (Section NAF macro + sous-secteur fin)
     const [sectionsNaf, setSectionsNaf] = useState<string[]>([]);
@@ -294,6 +296,16 @@ const Dashboard: React.FC = () => {
                 query += ` AND lower(CAST(COALESCE(est_superieur_taux_legal, 'Non') AS VARCHAR)) IN ('oui', 'true', '1')`;
             }
 
+            // Uniquement Prime Carburant
+            if (onlyPrimeCarburant) {
+                query += ` AND lower(CAST(COALESCE(est_prime_carburant, 'Non') AS VARCHAR)) IN ('oui', 'true', '1')`;
+            }
+
+            // Uniquement Infrastructures Vélo
+            if (onlyInfraVelo) {
+                query += ` AND lower(CAST(COALESCE(est_infra_velo, 'Non') AS VARCHAR)) IN ('oui', 'true', '1')`;
+            }
+
             // ID Filter
             if (searchId) {
                 const idTerm = searchId.replace(/'/g, "''").trim().toLowerCase();
@@ -328,7 +340,7 @@ const Dashboard: React.FC = () => {
             isCancelled = true;
             clearTimeout(timer);
         };
-    }, [globalSearch, measureSearch, selectedSectionNaf, selectedSubSector, selectedLocations, onlyMobiliteIA, onlyIDF, ignoreRevendications, onlyFmdIkv, onlyEffortRemboursement, searchId, selectedYears, dbReady]);
+    }, [globalSearch, measureSearch, selectedSectionNaf, selectedSubSector, selectedLocations, onlyMobiliteIA, onlyIDF, ignoreRevendications, onlyFmdIkv, onlyEffortRemboursement, onlyPrimeCarburant, onlyInfraVelo, searchId, selectedYears, dbReady]);
 
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1314,7 +1326,7 @@ const Dashboard: React.FC = () => {
 
                     {/* Reset Button */}
                     <div className="md:col-span-3 flex items-end">
-                        {(globalSearch || measureSearch || selectedSectionNaf || selectedSubSector || selectedLocations.length > 0 || selectedYears.length > 0 || onlyMobiliteIA || onlyIDF || ignoreRevendications || onlyFmdIkv || onlyEffortRemboursement) && (
+                        {(globalSearch || measureSearch || selectedSectionNaf || selectedSubSector || selectedLocations.length > 0 || selectedYears.length > 0 || onlyMobiliteIA || onlyIDF || ignoreRevendications || onlyFmdIkv || onlyEffortRemboursement || onlyPrimeCarburant || onlyInfraVelo) && (
                             <button
                                 type="button"
                                 onClick={() => {
@@ -1329,6 +1341,8 @@ const Dashboard: React.FC = () => {
                                     setIgnoreRevendications(false);
                                     setOnlyFmdIkv(false);
                                     setOnlyEffortRemboursement(false);
+                                    setOnlyPrimeCarburant(false);
+                                    setOnlyInfraVelo(false);
                                 }}
                                 className="w-full py-2 px-3 rounded-md text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900/50 transition-colors"
                             >
@@ -1421,6 +1435,40 @@ const Dashboard: React.FC = () => {
                         </button>
                         <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur les accords où le remboursement des transports en commun dépasse l'obligation légale de 50%">
                             Effort remboursement {">"} 50%
+                        </span>
+                    </div>
+
+                    {/* Prime carburant */}
+                    <div className="flex items-center">
+                        <button 
+                            type="button" 
+                            className={`${onlyPrimeCarburant ? 'bg-amber-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500`}
+                            role="switch"
+                            aria-checked={onlyPrimeCarburant}
+                            onClick={() => setOnlyPrimeCarburant(!onlyPrimeCarburant)}
+                        >
+                            <span className="sr-only">Prime carburant accordée</span>
+                            <span aria-hidden="true" className={`${onlyPrimeCarburant ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
+                        </button>
+                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur les accords actant la mise à disposition ou revalorisation d'une prime carburant">
+                            ⛽ Prime carburant
+                        </span>
+                    </div>
+
+                    {/* Infrastructures vélo */}
+                    <div className="flex items-center">
+                        <button 
+                            type="button" 
+                            className={`${onlyInfraVelo ? 'bg-cyan-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500`}
+                            role="switch"
+                            aria-checked={onlyInfraVelo}
+                            onClick={() => setOnlyInfraVelo(!onlyInfraVelo)}
+                        >
+                            <span className="sr-only">Infrastructures vélo disponibles</span>
+                            <span aria-hidden="true" className={`${onlyInfraVelo ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
+                        </button>
+                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur les accords actant la création ou mise à disposition d'aménagements physiques vélo (abris, douches, casiers, bornes VAE, etc.)">
+                            🚲 Infra vélo
                         </span>
                     </div>
                 </div>

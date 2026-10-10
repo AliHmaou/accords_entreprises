@@ -204,6 +204,16 @@ const DetailsModal = ({ agreement, onClose, highlightTerm }: DetailsModalProps) 
                                 🌿 Mobilités Durables
                             </span>
                         )}
+                        {String(agreement.est_prime_carburant || '').toLowerCase() === 'oui' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800" title="Prime carburant accordée par l'employeur">
+                                ⛽ Prime carburant
+                            </span>
+                        )}
+                        {String(agreement.est_infra_velo || '').toLowerCase() === 'oui' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800" title="Infrastructures vélo disponibles">
+                                🚲 Infra vélo
+                            </span>
+                        )}
                         {agreement.SECTION_NAF && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                                 🏷️ {agreement.SECTION_NAF}

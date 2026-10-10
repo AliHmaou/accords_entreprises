@@ -237,6 +237,18 @@ const DataTable: React.FC<DataTableProps> = ({
                                              <span className="hidden xl:inline text-[10px]">Détails</span>
                                          </span>
                                      </div>
+                                     <div className="flex items-center flex-wrap gap-1 mt-1">
+                                         {String(agreement.est_prime_carburant || '').toLowerCase() === 'oui' && (
+                                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800" title="Prime carburant accordée">
+                                                 ⛽ Prime carburant
+                                             </span>
+                                         )}
+                                         {String(agreement.est_infra_velo || '').toLowerCase() === 'oui' && (
+                                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-cyan-50 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800" title="Infrastructures vélo disponibles">
+                                                 🚲 Infra vélo
+                                             </span>
+                                         )}
+                                     </div>
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap text-sm">
                                     <a 

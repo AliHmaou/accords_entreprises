@@ -35,6 +35,8 @@ export interface Agreement {
   est_revendication?: string;
   est_superieur_taux_legal?: string;
   est_fmd_ikv_mis_en_place?: string;
+  est_prime_carburant?: string;       // Mise à disposition ou hausse d'une prime carburant (Oui/Non)
+  est_infra_velo?: string;            // Mise à disposition d'infrastructures vélo (Oui/Non)
   moyens_materiels?: string;
   moyens_financiers?: string;
   mesures_ref_idfm?: string;      // mesure issue du référentiel IDFM
