@@ -37,16 +37,16 @@ const Dashboard: React.FC = () => {
     // Dataset Scope State (par défaut IDF pour un démarrage ultra-rapide)
     const [datasetScope, setDatasetScope] = useState<'IDF' | 'FRANCE'>('IDF');
     
-    // Tab State
-    const [activeTab, setActiveTab] = useState<TabType>('stats');
+    // Tab State (Carte par défaut)
+    const [activeTab, setActiveTab] = useState<TabType>('map');
 
     // Search States
     const [globalSearch, setGlobalSearch] = useState('');
     const [measureSearch, setMeasureSearch] = useState('');
     const [availableMeasures, setAvailableMeasures] = useState<string[]>(IDFM_OFFICIAL_MEASURES);
-    const [onlyMobiliteIA, setOnlyMobiliteIA] = useState(false);
-    const [onlyIDF, setOnlyIDF] = useState(false); 
-    const [ignoreRevendications, setIgnoreRevendications] = useState(false);
+    const [onlyMobiliteIA, setOnlyMobiliteIA] = useState(true);
+    const [onlyIDF, setOnlyIDF] = useState(true); 
+    const [ignoreRevendications, setIgnoreRevendications] = useState(true);
     const [onlyFmdIkv, setOnlyFmdIkv] = useState(false);
     const [onlyEffortRemboursement, setOnlyEffortRemboursement] = useState(false);
     const [onlyPrimeCarburant, setOnlyPrimeCarburant] = useState(false);
