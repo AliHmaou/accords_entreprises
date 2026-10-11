@@ -10,6 +10,7 @@ import MapTab from './MapTab';
 import AboutData from './AboutData';
 import AboutDashboard from './AboutDashboard';
 import LiveSQL from './LiveSQL';
+import SidebarFilters from './SidebarFilters';
 import { initDuckDB, loadParquetFile, runQuery } from '../duckdbClient';
 import * as XLSX from 'xlsx';
 
@@ -80,9 +81,20 @@ const Dashboard: React.FC = () => {
     const [geoInput, setGeoInput] = useState('');
     const [showGeoSuggestions, setShowGeoSuggestions] = useState(false);
     
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [dbReady, setDbReady] = useState(false);
+    
+    const toggleSidebar = () => {
+        setIsSidebarOpen(prev => {
+            const next = !prev;
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+            }, 100);
+            return next;
+        });
+    };
     
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -1059,6 +1071,43 @@ const Dashboard: React.FC = () => {
         return filteredAgreements.filter(a => checkMobility(a)).length;
     }, [filteredAgreements]);
 
+    // Active filters count badge
+    const activeFiltersCount = useMemo(() => {
+        let count = 0;
+        if (globalSearch.trim()) count++;
+        if (measureSearch) count++;
+        if (selectedSectionNaf) count++;
+        if (selectedSubSector) count++;
+        if (selectedLocations.length > 0) count += selectedLocations.length;
+        if (selectedYears.length > 0) count += selectedYears.length;
+        if (onlyMobiliteIA) count++;
+        if (onlyIDF) count++;
+        if (ignoreRevendications) count++;
+        if (onlyFmdIkv) count++;
+        if (onlyEffortRemboursement) count++;
+        if (onlyPrimeCarburant) count++;
+        if (onlyInfraVelo) count++;
+        return count;
+    }, [globalSearch, measureSearch, selectedSectionNaf, selectedSubSector, selectedLocations, selectedYears, onlyMobiliteIA, onlyIDF, ignoreRevendications, onlyFmdIkv, onlyEffortRemboursement, onlyPrimeCarburant, onlyInfraVelo]);
+    const hasActiveFilters = activeFiltersCount > 0;
+
+    const handleResetFilters = () => {
+        setGlobalSearch('');
+        setMeasureSearch('');
+        setSelectedSectionNaf('');
+        setSelectedSubSector('');
+        setSelectedLocations([]);
+        setSelectedYears([]);
+        setOnlyMobiliteIA(false);
+        setOnlyIDF(false);
+        setIgnoreRevendications(false);
+        setOnlyFmdIkv(false);
+        setOnlyEffortRemboursement(false);
+        setOnlyPrimeCarburant(false);
+        setOnlyInfraVelo(false);
+    };
+
+
     const sortedAgreements = useMemo(() => {
         if (!sortField) return filteredAgreements;
         
@@ -1086,7 +1135,7 @@ const Dashboard: React.FC = () => {
     }, [sortedAgreements, currentPage]);
 
     return (
-        <div className="space-y-6 relative min-h-[500px]">
+        <div className="relative min-h-[500px]">
             {isLoading && (
                  <div className="absolute inset-0 bg-white/80 z-50 flex items-start justify-center pt-40 backdrop-blur-sm h-full rounded-lg">
                     <div className="flex flex-col items-center p-6 bg-white shadow-xl rounded-xl border border-indigo-100">
@@ -1096,435 +1145,107 @@ const Dashboard: React.FC = () => {
                 </div>
             )}
 
-            {/* Scope Switcher Banner (Île-de-France vs France entière) */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-lg border bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/40 border-indigo-200 dark:border-indigo-800 shadow-xs">
-                <div className="flex items-center gap-3">
-                    <span className="text-2xl">{datasetScope === 'IDF' ? '🗼' : '🇫🇷'}</span>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                {datasetScope === 'IDF' ? 'Périmètre actif : Île-de-France (32 703 accords)' : 'Périmètre actif : France Entière (123 431 accords)'}
-                            </span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-semibold uppercase">
-                                {datasetScope === 'IDF' ? 'Chargement Rapide' : 'Exhaustif'}
-                            </span>
-                        </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                            {datasetScope === 'IDF' 
-                                ? 'Jeu de données allégé (14.6 Mo). Cliquez pour charger l\'ensemble des départements français si besoin.' 
-                                : 'Jeu de données national complet (82.7 Mo). Cliquez pour revenir à la version allégée francilienne.'}
-                        </p>
-                    </div>
-                </div>
-                <div>
-                    {datasetScope === 'IDF' ? (
-                        <button
-                            type="button"
-                            onClick={() => switchDataset('FRANCE')}
-                            disabled={isLoading}
-                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-semibold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
-                        >
-                            <span>🇫🇷 Charger la France entière</span>
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={() => switchDataset('IDF')}
-                            disabled={isLoading}
-                            className="px-4 py-2 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md text-xs font-semibold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
-                        >
-                            <span>🗼 Revenir à Île-de-France</span>
-                        </button>
-                    )}
-                </div>
-            </div>
+            <div className="flex flex-col lg:flex-row items-start gap-5">
+                {/* Volet Latéral / Sidebar (Périmètre + Filtres) */}
+                {isSidebarOpen && (
+                    <SidebarFilters
+                        onCloseSidebar={toggleSidebar}
+                        datasetScope={datasetScope}
+                        onSwitchDataset={switchDataset}
+                        isLoading={isLoading}
+                        activeFiltersCount={activeFiltersCount}
+                        globalSearch={globalSearch}
+                        onGlobalSearchChange={setGlobalSearch}
+                        measureSearch={measureSearch}
+                        onMeasureSearchChange={setMeasureSearch}
+                        availableMeasures={availableMeasures}
+                        sectionsNaf={sectionsNaf}
+                        selectedSectionNaf={selectedSectionNaf}
+                        onSectionNafChange={setSelectedSectionNaf}
+                        subSectors={subSectors}
+                        selectedSubSector={selectedSubSector}
+                        onSubSectorChange={setSelectedSubSector}
+                        years={years}
+                        selectedYears={selectedYears}
+                        onSelectedYearsChange={setSelectedYears}
+                        geoInput={geoInput}
+                        onGeoInputChange={setGeoInput}
+                        showGeoSuggestions={showGeoSuggestions}
+                        onShowGeoSuggestionsChange={setShowGeoSuggestions}
+                        filteredGeoSuggestions={filteredGeoSuggestions}
+                        selectedLocations={selectedLocations}
+                        onAddLocation={addLocation}
+                        onRemoveLocation={removeLocation}
+                        geoWrapperRef={geoWrapperRef}
+                        getBadgeColor={getBadgeColor}
+                        onlyMobiliteIA={onlyMobiliteIA}
+                        onToggleMobiliteIA={() => setOnlyMobiliteIA(!onlyMobiliteIA)}
+                        onlyIDF={onlyIDF}
+                        onToggleIDF={() => setOnlyIDF(!onlyIDF)}
+                        ignoreRevendications={ignoreRevendications}
+                        onToggleIgnoreRevendications={() => setIgnoreRevendications(!ignoreRevendications)}
+                        onlyFmdIkv={onlyFmdIkv}
+                        onToggleFmdIkv={() => setOnlyFmdIkv(!onlyFmdIkv)}
+                        onlyEffortRemboursement={onlyEffortRemboursement}
+                        onToggleEffortRemboursement={() => setOnlyEffortRemboursement(!onlyEffortRemboursement)}
+                        onlyPrimeCarburant={onlyPrimeCarburant}
+                        onTogglePrimeCarburant={() => setOnlyPrimeCarburant(!onlyPrimeCarburant)}
+                        onlyInfraVelo={onlyInfraVelo}
+                        onToggleInfraVelo={() => setOnlyInfraVelo(!onlyInfraVelo)}
+                        hasActiveFilters={hasActiveFilters}
+                        onResetFilters={handleResetFilters}
+                    />
+                )}
 
-            {/* Filters Section */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
-                    {/* Global Search */}
-                    <div className="lg:col-span-3">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
-                            Recherche Globale
-                        </label>
-                        <input
-                            type="text"
-                            value={globalSearch}
-                            onChange={e => setGlobalSearch(e.target.value)}
-                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
-                            placeholder="ID, SIRET, entreprise, mot-clé, texte..."
-                        />
-                    </div>
+                {/* Zone Principale de Données */}
+                <div className="flex-1 w-full min-w-0 space-y-4">
 
-                    {/* Mesure IDFM (Menu déroulant intuitif) */}
-                    <div className="lg:col-span-3">
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
-                            Mesure IDFM
-                        </label>
-                        <select
-                            value={measureSearch}
-                            onChange={e => setMeasureSearch(e.target.value)}
-                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
-                        >
-                            <option value="">Toutes les mesures IDFM ({availableMeasures.length})</option>
-                            {availableMeasures.map((measure) => (
-                                <option key={measure} value={measure}>
-                                    {measure}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Secteur d'activité macro (Section NAF Insee A à U) & Sous-secteur */}
-                    <div className="lg:col-span-3">
-                        <div className="flex items-center justify-between mb-1">
-                            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">
-                                Secteur (Section NAF)
-                            </label>
-                            {selectedSectionNaf && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setSelectedSectionNaf('');
-                                        setSelectedSubSector('');
-                                    }}
-                                    className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
-                                >
-                                    Effacer
-                                </button>
-                            )}
-                        </div>
-                        <select
-                            value={selectedSectionNaf}
-                            onChange={e => {
-                                const val = e.target.value;
-                                setSelectedSectionNaf(val);
-                                setSelectedSubSector('');
-                            }}
-                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
-                        >
-                            <option value="">Toutes les sections NAF ({sectionsNaf.length})</option>
-                            {sectionsNaf.map((sec) => (
-                                <option key={sec} value={sec}>
-                                    {sec}
-                                </option>
-                            ))}
-                        </select>
-
-                        {/* Sous-secteur d'activité détaillé en cascade */}
-                        {selectedSectionNaf && subSectors.length > 0 && (
-                            <div className="mt-2">
-                                <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">
-                                    ↳ Sous-secteur précis ({subSectors.length}) :
-                                </label>
-                                <select
-                                    value={selectedSubSector}
-                                    onChange={e => setSelectedSubSector(e.target.value)}
-                                    className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 text-xs bg-gray-50 dark:bg-gray-700/80 text-gray-900 dark:text-gray-200 py-1.5 px-2.5"
-                                >
-                                    <option value="">Tous les sous-secteurs ({subSectors.length})</option>
-                                    {subSectors.map((sub) => (
-                                        <option key={sub} value={sub}>
-                                            {sub}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Année de signature de l'accord (Sélection multiple DATE_TEXTE) */}
-                    <div className="lg:col-span-3">
-                        <div className="flex items-center justify-between mb-1">
-                            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">
-                                Année(s) de signature
-                            </label>
-                            {selectedYears.length > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedYears([])}
-                                    className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
-                                >
-                                    Toutes ({selectedYears.length} sélec.)
-                                </button>
-                            )}
-                        </div>
-                        <div className="flex flex-wrap gap-1 p-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md min-h-[38px] items-center">
+                    {/* Top Control Bar */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xs border border-gray-200/80 dark:border-gray-700/80 p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
                             <button
                                 type="button"
-                                onClick={() => setSelectedYears([])}
-                                className={`px-2 py-1 rounded text-xs font-medium transition ${
-                                    selectedYears.length === 0
-                                        ? 'bg-indigo-600 text-white shadow-xs'
-                                        : 'bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500'
-                                }`}
+                                onClick={toggleSidebar}
+                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-700/60 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-200 transition shadow-2xs cursor-pointer"
+                                title={isSidebarOpen ? "Masquer le volet des filtres" : "Afficher le volet des filtres"}
                             >
-                                Toutes
-                            </button>
-                            {years.map((y) => {
-                                const isSelected = selectedYears.includes(y);
-                                return (
-                                    <button
-                                        key={y}
-                                        type="button"
-                                        onClick={() => {
-                                            if (isSelected) {
-                                                setSelectedYears(selectedYears.filter(yr => yr !== y));
-                                            } else {
-                                                setSelectedYears([...selectedYears, y].sort((a, b) => b - a));
-                                            }
-                                        }}
-                                        className={`px-2 py-1 rounded text-xs font-medium transition flex items-center gap-1 ${
-                                            isSelected
-                                                ? 'bg-indigo-600 text-white shadow-xs'
-                                                : 'bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500'
-                                        }`}
-                                    >
-                                        {y}
-                                        {isSelected && <span className="text-[10px] leading-none opacity-80">✕</span>}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Deuxième rangée de filtres : Territoire & Reset */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pt-1 border-t border-gray-100 dark:border-gray-700/60">
-
-                    {/* Geo Location Filter */}
-                    <div className="md:col-span-9 relative" ref={geoWrapperRef}>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
-                            Territoire (Région, Département, EPCI, EPT)
-                        </label>
-                        <input
-                            type="text"
-                            value={geoInput}
-                            onChange={e => {
-                                setGeoInput(e.target.value);
-                                setShowGeoSuggestions(true);
-                            }}
-                            onFocus={() => setShowGeoSuggestions(true)}
-                            className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
-                            placeholder={selectedLocations.length > 0 ? "Ajouter un territoire..." : "Rechercher une région, un département, un EPCI ou un EPT (ex: 75, Hauts-de-Seine, Grand Paris)..."}
-                        />
-                        {showGeoSuggestions && geoInput && (
-                            <ul className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                                {filteredGeoSuggestions.length > 0 ? filteredGeoSuggestions.map((loc, idx) => (
-                                    <li
-                                        key={loc.name + loc.type + idx}
-                                        className="text-gray-900 dark:text-gray-200 cursor-pointer select-none relative py-2 pl-3 pr-4 hover:bg-indigo-600 hover:text-white flex justify-between items-center"
-                                        onClick={() => addLocation(loc)}
-                                    >
-                                        <span className="truncate">{loc.name}</span>
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${getBadgeColor(loc.type)}`}>
-                                            {loc.type}
-                                        </span>
-                                    </li>
-                                )) : (
-                                    <li className="text-gray-500 dark:text-gray-400 cursor-default select-none relative py-2 pl-3 pr-9">
-                                        Aucun lieu trouvé
-                                    </li>
+                                <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                                <span>{isSidebarOpen ? "Masquer volet" : "Filtres"}</span>
+                                {activeFiltersCount > 0 && (
+                                    <span className="px-1.5 py-0.2 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-bold text-[10px]">
+                                        {activeFiltersCount}
+                                    </span>
                                 )}
-                            </ul>
-                        )}
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {selectedLocations.map((loc, idx) => (
-                                <span key={loc.name + idx} className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBadgeColor(loc.type)}`}>
-                                    {loc.name}
-                                    <button
-                                        type="button"
-                                        onClick={() => removeLocation(loc.name)}
-                                        className="flex-shrink-0 ml-1.5 h-4 w-4 rounded-full inline-flex items-center justify-center opacity-60 hover:opacity-100 focus:outline-none"
-                                    >
-                                        <span className="sr-only">Remove {loc.name}</span>
-                                        <svg className="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
-                                            <path strokeLinecap="round" strokeWidth="1.5" d="M1 1l6 6m0-6L1 7" />
-                                        </svg>
-                                    </button>
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Reset Button */}
-                    <div className="md:col-span-3 flex items-end">
-                        {(globalSearch || measureSearch || selectedSectionNaf || selectedSubSector || selectedLocations.length > 0 || selectedYears.length > 0 || onlyMobiliteIA || onlyIDF || ignoreRevendications || onlyFmdIkv || onlyEffortRemboursement || onlyPrimeCarburant || onlyInfraVelo) && (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setGlobalSearch('');
-                                    setMeasureSearch('');
-                                    setSelectedSectionNaf('');
-                                    setSelectedSubSector('');
-                                    setSelectedLocations([]);
-                                    setSelectedYears([]);
-                                    setOnlyMobiliteIA(false);
-                                    setOnlyIDF(false);
-                                    setIgnoreRevendications(false);
-                                    setOnlyFmdIkv(false);
-                                    setOnlyEffortRemboursement(false);
-                                    setOnlyPrimeCarburant(false);
-                                    setOnlyInfraVelo(false);
-                                }}
-                                className="w-full py-2 px-3 rounded-md text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900/50 transition-colors"
-                            >
-                                ✕ Réinitialiser les filtres
                             </button>
-                        )}
-                    </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-6 pt-2">
-                    {/* Mobilité confirmée IA */}
-                    <div className="flex items-center">
-                        <button 
-                            type="button" 
-                            className={`${onlyMobiliteIA ? 'bg-teal-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500`}
-                            role="switch"
-                            aria-checked={onlyMobiliteIA}
-                            onClick={() => setOnlyMobiliteIA(!onlyMobiliteIA)}
+                            <p className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                                <span className="text-indigo-600 dark:text-indigo-400 font-bold">{measuresDetectedCount}</span> mesure(s) dans <span className="text-indigo-600 dark:text-indigo-400 font-bold">{agreementsWithMobilityCount}</span> accord(s) (<span className="text-indigo-600 dark:text-indigo-400 font-bold">{establishmentsWithMobilityCount}</span> sites).
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleExportXLSX}
+                            disabled={isExporting || filteredAgreements.length === 0}
+                            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 transition-all shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+                            title="Télécharger les accords actuellement filtrés au format tableur Excel .xlsx"
                         >
-                            <span className="sr-only">Mentionne les mobilités ?</span>
-                            <span aria-hidden="true" className={`${onlyMobiliteIA ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
+                            {isExporting ? (
+                                <>
+                                    <span className="animate-spin h-3.5 w-3.5 border-2 border-emerald-600 border-t-transparent rounded-full" />
+                                    <span>Génération Excel...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm1.8 14.5-1.4-2.5 1.4-2.5h-1.6l-.7 1.5-.7-1.5h-1.6l1.4 2.5-1.4 2.5h1.6l.7-1.6.7 1.6h1.6zM13 9V3.5L18.5 9H13z"/>
+                                    </svg>
+                                    <span>Exporter en Excel (.xlsx)</span>
+                                    <span className="text-[11px] opacity-80">({filteredAgreements.length.toLocaleString('fr-FR')})</span>
+                                </>
+                            )}
                         </button>
-                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur mentionne_mobilite_ia : l'IA a confirmé que l'extrait traite réellement de mobilité (évite les faux positifs lexicaux)">
-                            Mentionne les mobilités ?
-                        </span>
                     </div>
-
-                    {/* IDF Only */}
-                    <div className="flex items-center">
-                        <button 
-                            type="button" 
-                            className={`${onlyIDF ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
-                            role="switch"
-                            aria-checked={onlyIDF}
-                            onClick={() => setOnlyIDF(!onlyIDF)}
-                        >
-                            <span className="sr-only">Île-de-France uniquement</span>
-                            <span aria-hidden="true" className={`${onlyIDF ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
-                        </button>
-                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">
-                            Île-de-France
-                        </span>
-                    </div>
-
-                    {/* Ignorer Revendications */}
-                    <div className="flex items-center">
-                        <button 
-                            type="button" 
-                            className={`${ignoreRevendications ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
-                            role="switch"
-                            aria-checked={ignoreRevendications}
-                            onClick={() => setIgnoreRevendications(!ignoreRevendications)}
-                        >
-                            <span className="sr-only">Ignorer les revendications</span>
-                            <span aria-hidden="true" className={`${ignoreRevendications ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
-                        </button>
-                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Exclut les revendications syndicales et objectifs de négociation non actés">
-                            Ignorer revendications
-                        </span>
-                    </div>
-
-                    {/* FMD / IKV en place */}
-                    <div className="flex items-center">
-                        <button 
-                            type="button" 
-                            className={`${onlyFmdIkv ? 'bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500`}
-                            role="switch"
-                            aria-checked={onlyFmdIkv}
-                            onClick={() => setOnlyFmdIkv(!onlyFmdIkv)}
-                        >
-                            <span className="sr-only">Uniquement FMD ou IKV confirmé</span>
-                            <span aria-hidden="true" className={`${onlyFmdIkv ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
-                        </button>
-                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur les accords où le Forfait Mobilités Durables ou l'Indemnité Vélo est mis en place de façon confirmée">
-                            FMD/IKV confirmés
-                        </span>
-                    </div>
-
-                    {/* Effort de remboursement */}
-                    <div className="flex items-center">
-                        <button 
-                            type="button" 
-                            className={`${onlyEffortRemboursement ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500`}
-                            role="switch"
-                            aria-checked={onlyEffortRemboursement}
-                            onClick={() => setOnlyEffortRemboursement(!onlyEffortRemboursement)}
-                        >
-                            <span className="sr-only">Effort remboursement transports</span>
-                            <span aria-hidden="true" className={`${onlyEffortRemboursement ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
-                        </button>
-                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur les accords où le remboursement des transports en commun dépasse l'obligation légale de 50%">
-                            Effort remboursement {">"} 50%
-                        </span>
-                    </div>
-
-                    {/* Prime carburant */}
-                    <div className="flex items-center">
-                        <button 
-                            type="button" 
-                            className={`${onlyPrimeCarburant ? 'bg-amber-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500`}
-                            role="switch"
-                            aria-checked={onlyPrimeCarburant}
-                            onClick={() => setOnlyPrimeCarburant(!onlyPrimeCarburant)}
-                        >
-                            <span className="sr-only">Prime carburant accordée</span>
-                            <span aria-hidden="true" className={`${onlyPrimeCarburant ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
-                        </button>
-                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur les accords actant la mise à disposition ou revalorisation d'une prime carburant">
-                            ⛽ Prime carburant
-                        </span>
-                    </div>
-
-                    {/* Infrastructures vélo */}
-                    <div className="flex items-center">
-                        <button 
-                            type="button" 
-                            className={`${onlyInfraVelo ? 'bg-cyan-600' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500`}
-                            role="switch"
-                            aria-checked={onlyInfraVelo}
-                            onClick={() => setOnlyInfraVelo(!onlyInfraVelo)}
-                        >
-                            <span className="sr-only">Infrastructures vélo disponibles</span>
-                            <span aria-hidden="true" className={`${onlyInfraVelo ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}></span>
-                        </button>
-                        <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300" title="Filtre sur les accords actant la création ou mise à disposition d'aménagements physiques vélo (abris, douches, casiers, bornes VAE, etc.)">
-                            🚲 Infra vélo
-                        </span>
-                    </div>
-                </div>
-
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <span className="text-indigo-600 dark:text-indigo-400 font-bold">{measuresDetectedCount}</span> mesure(s) détectée(s) dans <span className="text-indigo-600 dark:text-indigo-400 font-bold">{agreementsWithMobilityCount}</span> accord(s) (<span className="text-indigo-600 dark:text-indigo-400 font-bold">{establishmentsWithMobilityCount}</span> établissement(s) distincts) sur un total de <span className="text-indigo-600 dark:text-indigo-400 font-bold">{uniqueAgreementsCount}</span> accord(s) analysés (<span className="text-indigo-600 dark:text-indigo-400 font-bold">{uniqueEstablishmentsCount}</span> établissement(s) distincts).
-                     </p>
-                     
-                     <button
-                         type="button"
-                         onClick={handleExportXLSX}
-                         disabled={isExporting || filteredAgreements.length === 0}
-                         className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 transition-all shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                         title="Télécharger les accords actuellement filtrés au format tableur Excel .xlsx"
-                     >
-                         {isExporting ? (
-                             <>
-                                 <span className="animate-spin h-3.5 w-3.5 border-2 border-emerald-600 border-t-transparent rounded-full" />
-                                 <span>Génération Excel...</span>
-                             </>
-                         ) : (
-                             <>
-                                 <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
-                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm1.8 14.5-1.4-2.5 1.4-2.5h-1.6l-.7 1.5-.7-1.5h-1.6l1.4 2.5-1.4 2.5h1.6l.7-1.6.7 1.6h1.6zM13 9V3.5L18.5 9H13z"/>
-                                 </svg>
-                                 <span>Exporter en Excel (.xlsx)</span>
-                                 <span className="text-[11px] opacity-80">({filteredAgreements.length.toLocaleString('fr-FR')})</span>
-                             </>
-                         )}
-                     </button>
-                </div>
-            </div>
 
             {/* Tabs Navigation */}
             <div className="border-b border-gray-200 dark:border-gray-700">
@@ -1718,6 +1439,8 @@ const Dashboard: React.FC = () => {
                          <AboutDashboard />
                     </div>
                 )}
+            </div>
+            </div>
             </div>
 
             {/* Details Modal */}

@@ -104,6 +104,25 @@ const MapTab: React.FC<MapTabProps> = ({ agreements, onMarkerClick, onSwitchToMe
         return Array.from(map.values());
     }, [agreements]);
 
+    // ResizeObserver pour adapter la carte automatiquement aux changements de volet latéral
+    useEffect(() => {
+        const handleResize = () => {
+            mapInstanceRef.current?.invalidateSize();
+        };
+        window.addEventListener('resize', handleResize);
+        let observer: ResizeObserver | null = null;
+        if (mapContainerRef.current) {
+            observer = new ResizeObserver(() => {
+                mapInstanceRef.current?.invalidateSize();
+            });
+            observer.observe(mapContainerRef.current);
+        }
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            if (observer) observer.disconnect();
+        };
+    }, []);
+
     // 2. Render markers on Leaflet
     useEffect(() => {
         if (!mapContainerRef.current) return;
@@ -223,7 +242,7 @@ const MapTab: React.FC<MapTabProps> = ({ agreements, onMarkerClick, onSwitchToMe
     const totalGeocodedMeasures = agreements.filter(a => a.localisation_lat && a.localisation_lon).length;
 
     return (
-        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-1 h-[600px] flex flex-col relative z-0">
+        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-1 h-[720px] lg:h-[780px] min-h-[550px] flex flex-col relative z-0">
             {/* Legend & Counter Badge */}
             <div className="absolute top-4 right-4 z-[1000] bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-gray-200/80 dark:border-gray-700 text-xs flex flex-col gap-1.5 max-w-xs">
                 <div className="font-bold text-gray-900 dark:text-gray-100 flex items-center justify-between gap-3">

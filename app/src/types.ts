@@ -66,3 +66,9 @@ export interface Agreement {
   localisation_region?: string;
   localisation_nom_commune?: string;
 }
+
+
+export interface LocationItem {
+  name: string;
+  type: 'Région' | 'Département' | 'EPCI' | 'EPT' | 'Commune';
+}
