@@ -137,24 +137,73 @@ upload_to_huggingface(file_path, repo, token, 'IDFM_ACCO_ACCORDS_PROFESSIONNELS_
 
 ---
 
-## 8. 🔍 Inférence Ad Hoc de Nouveaux Insights (`scripts/infer_ad_hoc_insights.py`)
+## 🧠 4. Inférence Ad Hoc de Nouveaux Insights (`scripts/infer_ad_hoc_insights.py`)
 
-Ce script permet d'extraire de nouveaux champs métiers directement depuis les fichiers Parquet Hugging Face complets de référence **sans rouvrir les archives brutes ni réanalyser l'intégralité du corpus** :
-1. **`est_prime_carburant`** : `"Oui"` / `"Non"` (Prime carburant accordée / revalorisée).
-2. **`est_infra_velo`** : `"Oui"` / `"Non"` (Infrastructures et équipements matériels vélo).
-3. **`moyens_materiels`** : Enrichi dynamiquement avec les équipements vélo extraits (liste ouverte : abris sécurisés, arceaux, douches, vestiaires, casiers, bornes de recharge VAE, stations de gonflage/réparation, etc.).
+Ce script permet d'extraire de nouveaux indicateurs métiers directement depuis les fichiers Parquet Hugging Face complets de référence **sans rouvrir les archives brutes ni réanalyser l'intégralité du corpus** :
 
-### Utilisation :
+### A. Champs Détectés
+1. **`est_prime_carburant`** (`"Oui"` / `"Non"`) :
+   * Détecte explicitement l'instauration, l'attribution, l'augmentation ou la revalorisation d'une prime carburant, chèque carburant, bon carburant ou prise en charge spécifique des frais de carburant pour les trajets domicile-travail.
+2. **`est_infra_velo`** (`"Oui"` / `"Non"`) :
+   * Détecte les aménagements physiques et équipements matériels dédiés aux cyclistes (stationnement, abris, douches, vestiaires, casiers, bornes de recharge VAE, stations de gonflage/réparation, vélos de service...).
+3. **`moyens_materiels`** :
+   * Enrichi dynamiquement avec les équipements vélo extraits selon une **liste ouverte et fidèle au texte**. Ces éléments sont fusionnés sans doublons avec les mentions existantes (séparateur ` | `).
+
+### B. Optimisation & Stratégie d'Exécution
+* **Double filtre d'accélération** :
+  - `mentionne_mobilite_ia = 'Oui'` (exclusion des ~70% d'accords sans mobilité confirmée par l'IA).
+  - Présence des thématiques cibles : `theme_recherche ILIKE '%carburant%' OR theme_recherche ILIKE '%velo%'`.
+* **Dédoublonnage des chunks** : Seuls les chunks textuels uniques (`extrait_chunk`) sont envoyés au LLM (`gpt-5.4-nano` en batchs de 5), puis les résultats sont re-jointoyés sur toutes les lignes.
+* **Résilience par Checkpoint** : Sauvegarde incrémentale dans `data/outputs/interim/ad_hoc_insights_checkpoint.json` toutes les 20 itérations. Si le script est interrompu, la reprise est immédiate.
+* **Double export automatique lors de l'upload (`--upload`)** :
+  - Génère et téléverse le dataset National : `IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION.parquet` (248 746 lignes).
+  - Extrait et téléverse la déclinaison Île-de-France : `IDFM_ACCO_ACCORDS_PROFESSIONNELS_MOBILITES_LOCALISATION_IDF.parquet` (68 230 lignes).
+
+### C. Commandes d'Exécution
 ```bash
-# 1. Test pilote rapide (ex: 10 chunks) sur l'Île-de-France
+# Test pilote rapide (ex: 10 chunks) sur l'Île-de-France
 python scripts/infer_ad_hoc_insights.py --scope idf --limit 10
 
-# 2. Exécution complète en tâche de fond sur l'Île-de-France (~2h, 814 batchs) avec upload automatique
-nohup python3 -u scripts/infer_ad_hoc_insights.py --scope idf --upload > infer_adhoc_idf.log 2>&1 &
-
-# 3. Exécution complète en tâche de fond sur le National (~6h, 2 472 batchs) avec upload automatique
+# Exécution complète National + IDF en arrière-plan avec publication Hugging Face automatique :
 nohup python3 -u scripts/infer_ad_hoc_insights.py --scope national --upload > infer_adhoc_national.log 2>&1 &
 ```
-* **Résilience** : Enregistre un checkpoint JSON dans `data/outputs/interim/ad_hoc_insights_checkpoint.json` toutes les 20 itérations. Si interrompu, relancer la commande reprendra exactement là où elle s'était arrêtée.
 
-Le dashboard en ligne prend automatiquement en compte le nouveau jeu de données à jour.
+---
+
+## 🏷️ 5. Simplification des Secteurs par Section NAF Insee (`app/src/nafConstants.ts`)
+
+Pour remplacer la liste déroulante ingérable de 681 sous-classes APE :
+1. **Règle officielle Insee (NAF rév. 2)** :
+   * Les 2 premiers chiffres du `CODE_APE` correspondent à la **Division** (01 à 99).
+   * La table de passage associe de manière déterministe chaque division à l'une des **21 Sections macroéconomiques (A à U)** :
+     - *Exemples* : 10 à 33 ➔ **C - Industrie manufacturière**, 49 à 53 ➔ **H - Transports et entreposage**, 86 à 88 ➔ **Q - Santé humaine et action sociale**.
+2. **Enrichissement DuckDB-Wasm dynamique** :
+   * Réalisé à la volée en mémoire lors du chargement des données (`CODE_SECTION_NAF`, `SECTION_NAF`) en ~30 ms pour 68 000 lignes.
+   * Ne nécessite aucun recalcul lourd des fichiers Parquet.
+3. **Filtre en cascade dans l'application** :
+   * L'utilisateur choisit d'abord une Section NAF macro (21 options).
+   * Un sous-sélecteur dynamique contextualisé apparaît alors pour affiner vers les sous-secteurs spécifiques de la section choisie.
+
+---
+
+## 🖥️ 6. Dashboard Web : Ergonomie & Fonctionnalités Clés (`app/src/`)
+
+L'application web React/Vite serverless (s'appuyant sur DuckDB-Wasm) intègre :
+
+1. **Volet Latéral Rétractable (Hamburger Sidebar)** :
+   * Les filtres et le bloc de périmètre actif (IDF / France) sont regroupés dans une barre latérale rétractable (`SidebarFilters.tsx`), ouverte par défaut.
+   * Libère plus de 400 pixels de hauteur pour la carte et le tableau. La carte interactive Leaflet s'adapte automatiquement à l'ouverture/fermeture via un `ResizeObserver`.
+2. **Recherche Globale Multi-Champs & Multi-Termes** :
+   * Prend en charge indifféremment les identifiants d'accords (`ACCOTEXT...`), numéros SIRET (14 chiffres), noms d'entreprises, mots-clés (`theme_recherche`, `mot_cle_calcule`), synthèses de mesures et texte intégral des chunks (`extrait_chunk`).
+   * Découpage par mots-clés multiples (ex: `"sncf vélo"` recherche la concordance sur chaque terme).
+3. **Export Direct Excel (`.xlsx`) Sécurisé** :
+   * Bouton dédié **`📊 Exporter en Excel (.xlsx)`** générant un classeur avec en-têtes français professionnels.
+   * **Protection limite Microsoft Excel** : Troncature automatique des cellules textuelles à 32 700 caractères (`truncateForExcel`) pour respecter la spécification stricte d'Excel (32 767 car. max par cellule).
+4. **Configuration par Défaut Métier** :
+   * Onglet actif par défaut : **Carte interactive (`MapTab`)**.
+   * Filtres activés d'emblée : **Mobilité IA = Oui**, **Île-de-France uniquement**, **Ignorer revendications**.
+5. **Ventilation Territoriale par Couronnes Franciliennes** :
+   * Donut 1 : **Paris (75)**
+   * Donut 2 : **Petite Couronne (92, 93, 94)**
+   * Donut 3 : **Grande Couronne (77, 78, 91, 95)**
+
