@@ -10,7 +10,8 @@ import MapTab from './MapTab';
 import AboutData from './AboutData';
 import AboutDashboard from './AboutDashboard';
 import LiveSQL from './LiveSQL';
-import { initDuckDB, loadParquetFile, loadJsonJSONL, runQuery } from '../duckdbClient';
+import { initDuckDB, loadParquetFile, runQuery } from '../duckdbClient';
+import * as XLSX from 'xlsx';
 
 import { 
     HF_PARQUET_URL_IDF, 
@@ -22,6 +23,21 @@ const TABLE_NAME = "agreements";
 const ITEMS_PER_PAGE = 20;
 
 type TabType = 'stats' | 'measures' | 'map' | 'live_sql' | 'about_data' | 'about_dash';
+
+function formatDate(value: string | number | null | undefined): string {
+    if (!value) return '';
+    const num = typeof value === 'number' ? value : Number(value);
+    let date: Date;
+    if (!isNaN(num) && num > 1e10) {
+        date = new Date(num);
+    } else if (typeof value === 'string' && value.length >= 8) {
+        date = new Date(value);
+    } else {
+        return String(value);
+    }
+    if (isNaN(date.getTime())) return String(value);
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
 
 // Type for the location filter item
 interface LocationItem {
@@ -64,7 +80,7 @@ const Dashboard: React.FC = () => {
     const [geoInput, setGeoInput] = useState('');
     const [showGeoSuggestions, setShowGeoSuggestions] = useState(false);
     
-    const [fileError, setFileError] = useState<string | null>(null);
+    const [isExporting, setIsExporting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [dbReady, setDbReady] = useState(false);
     
@@ -72,7 +88,6 @@ const Dashboard: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
 
     // Filters States
-    const [searchId, setSearchId] = useState<string>('');
     const [selectedYears, setSelectedYears] = useState<number[]>([]);
     const [years, setYears] = useState<number[]>([]);
 
@@ -182,7 +197,7 @@ const Dashboard: React.FC = () => {
                 await loadOptionsFromDB();
             } catch (err) {
                 console.error("Erreur initialisation DuckDB:", err);
-                setFileError("Impossible de charger le dataset distant.");
+                alert("Impossible de charger le dataset distant. Veuillez vérifier votre connexion.");
             } finally {
                 setIsLoading(false);
             }
@@ -211,14 +226,23 @@ const Dashboard: React.FC = () => {
 
             let query = `SELECT * FROM ${TABLE_NAME} WHERE 1=1`;
             
-            // Global Search
-            if (globalSearch) {
-                const term = globalSearch.replace(/'/g, "''").toLowerCase();
-                query += ` AND (
-                    lower(RAISON_SOCIALE) LIKE '%${term}%' OR 
-                    lower(TITRE_TXT) LIKE '%${term}%' OR 
-                    lower(extrait_chunk) LIKE '%${term}%'
-                )`;
+            // Global Search multi-termes (ID, SIRET, Entreprise, Titre, Mots-clés, Mesure, Moyens, Chunks)
+            if (globalSearch.trim()) {
+                const tokens = globalSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
+                tokens.forEach(token => {
+                    const safe = token.replace(/'/g, "''");
+                    query += ` AND (
+                        lower(COALESCE(ID, '')) LIKE '%${safe}%' OR 
+                        lower(COALESCE(SIRET, '')) LIKE '%${safe}%' OR 
+                        lower(COALESCE(RAISON_SOCIALE, '')) LIKE '%${safe}%' OR 
+                        lower(COALESCE(TITRE_TXT, '')) LIKE '%${safe}%' OR 
+                        lower(COALESCE(theme_recherche, '')) LIKE '%${safe}%' OR 
+                        lower(COALESCE(mot_cle_calcule, '')) LIKE '%${safe}%' OR 
+                        lower(COALESCE(mesure_extraite, '')) LIKE '%${safe}%' OR 
+                        lower(COALESCE(moyens_materiels, '')) LIKE '%${safe}%' OR 
+                        lower(COALESCE(extrait_chunk, '')) LIKE '%${safe}%'
+                    )`;
+                });
             }
 
             // Measure Label Search (cherche dans mesures_ref_idfm, mesure_extraite, resume_mesure_proposee et theme_recherche)
@@ -306,12 +330,6 @@ const Dashboard: React.FC = () => {
                 query += ` AND lower(CAST(COALESCE(est_infra_velo, 'Non') AS VARCHAR)) IN ('oui', 'true', '1')`;
             }
 
-            // ID Filter
-            if (searchId) {
-                const idTerm = searchId.replace(/'/g, "''").trim().toLowerCase();
-                query += ` AND lower(ID) LIKE '%${idTerm}%'`;
-            }
-
             // Year Filter (filtrage multiple sur l'année de signature issue de DATE_TEXTE)
             if (selectedYears.length > 0) {
                 query += ` AND EXTRACT(YEAR FROM CAST(DATE_TEXTE AS DATE)) IN (${selectedYears.join(', ')})`;
@@ -325,7 +343,6 @@ const Dashboard: React.FC = () => {
                 }
             } catch (e) {
                 console.error("Erreur requête SQL:", e);
-                // Clear results on error to avoid stale data persistence
                 if (!isCancelled) {
                     setFilteredAgreements([]);
                 }
@@ -340,62 +357,68 @@ const Dashboard: React.FC = () => {
             isCancelled = true;
             clearTimeout(timer);
         };
-    }, [globalSearch, measureSearch, selectedSectionNaf, selectedSubSector, selectedLocations, onlyMobiliteIA, onlyIDF, ignoreRevendications, onlyFmdIkv, onlyEffortRemboursement, onlyPrimeCarburant, onlyInfraVelo, searchId, selectedYears, dbReady]);
+    }, [globalSearch, measureSearch, selectedSectionNaf, selectedSubSector, selectedLocations, onlyMobiliteIA, onlyIDF, ignoreRevendications, onlyFmdIkv, onlyEffortRemboursement, onlyPrimeCarburant, onlyInfraVelo, selectedYears, dbReady]);
 
+    // Export des accords filtrés au format tableur Excel .xlsx
+    const handleExportXLSX = () => {
+        if (!filteredAgreements || filteredAgreements.length === 0) return;
+        setIsExporting(true);
+        try {
+            const exportRows = filteredAgreements.map(a => ({
+                "Identifiant Accord": a.ID || "",
+                "Raison Sociale": a.RAISON_SOCIALE || "",
+                "SIRET": a.SIRET || "",
+                "Date de Signature": formatDate(a.DATE_TEXTE),
+                "Date de Dépôt": formatDate(a.DATE_DEPOT),
+                "Section NAF": a.SECTION_NAF || "",
+                "Sous-secteur d'activité": a.SECTEUR || "",
+                "Code APE": a.CODE_APE || "",
+                "Taille d'Entreprise": a.categorie_entreprise || "",
+                "Région": a.localisation_region_nom || "",
+                "Département": a.localisation_departement_nom ? `${a.localisation_departement_nom} (${a.localisation_departement_code || ''})` : "",
+                "EPCI": a.localisation_epci_nom || "",
+                "EPT (Grand Paris)": a.localisation_ept_nom || "",
+                "Mesure IDFM": a.mesures_ref_idfm || "",
+                "Synthèse Mesure IA": a.mesure_extraite || a.resume_mesure_proposee || "",
+                "Mot-clé Détecté": a.theme_recherche || "",
+                "Mobilité Confirmée IA": a.mentionne_mobilite_ia || "Non",
+                "Mobilités Durables": a.est_mobilites_durables || "Non",
+                "Prime Carburant": a.est_prime_carburant || "Non",
+                "Infrastructures Vélo": a.est_infra_velo || "Non",
+                "FMD / IKV en place": a.est_fmd_ikv_mis_en_place || "Non",
+                "Remboursement TC > 50%": a.est_superieur_taux_legal || "Non",
+                "Moyens Matériels": a.moyens_materiels && a.moyens_materiels !== 'AUCUNE_CORRESPONDANCE' ? a.moyens_materiels : "",
+                "Moyens Financiers": a.moyens_financiers && a.moyens_financiers !== 'AUCUNE_CORRESPONDANCE' ? a.moyens_financiers : "",
+                "Titre de l'Accord": a.TITRE_TXT || "",
+                "Extrait de l'Accord": a.extrait_chunk || "",
+                "Lien Légifrance": a.url_legifrance || (a.ID ? `https://www.legifrance.gouv.fr/acco/id/${a.ID}` : "")
+            }));
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
+            const worksheet = XLSX.utils.json_to_sheet(exportRows);
 
-        setFileError(null);
-        setIsLoading(true);
-        const reader = new FileReader();
+            // Ajustement automatique des largeurs de colonnes
+            const colWidths = Object.keys(exportRows[0] || {}).map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportRows.slice(0, 100).map(row => String((row as any)[key] || '').length)
+                );
+                return { wch: Math.min(Math.max(maxLen + 2, 10), 60) };
+            });
+            worksheet['!cols'] = colWidths;
 
-        reader.onload = async (e) => {
-            const text = e.target?.result as string;
-            if (!text) return;
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Accords Mobilités");
 
-            try {
-                await loadJsonJSONL(TABLE_NAME, text);
-                
-                // Refresh sections NAF & sub-sectors list
-                const nafResult = await runQuery(`SELECT DISTINCT SECTION_NAF FROM ${TABLE_NAME} WHERE SECTION_NAF IS NOT NULL AND SECTION_NAF != 'Non renseigné' ORDER BY SECTION_NAF`);
-                const nafList = nafResult.map((r: any) => r.SECTION_NAF).filter(Boolean);
-                setSectionsNaf(nafList);
-
-                const subSectorResult = await runQuery(`SELECT DISTINCT SECTEUR FROM ${TABLE_NAME} WHERE SECTEUR IS NOT NULL ORDER BY SECTEUR`);
-                const subSectorList = subSectorResult.map((r: any) => r.SECTEUR).filter(Boolean);
-                setSubSectors(subSectorList);
-
-                // Refresh Geo options (Régions, Départements, EPCI, EPT)
-                const geoQuery = `
-                    SELECT DISTINCT localisation_region_nom as name, 'Région' as type FROM ${TABLE_NAME} WHERE localisation_region_nom IS NOT NULL
-                    UNION
-                    SELECT DISTINCT (localisation_departement_nom || ' (' || coalesce(localisation_departement_code, '') || ')') as name, 'Département' as type FROM ${TABLE_NAME} WHERE localisation_departement_nom IS NOT NULL
-                    UNION
-                    SELECT DISTINCT localisation_epci_nom as name, 'EPCI' as type FROM ${TABLE_NAME} WHERE localisation_epci_nom IS NOT NULL
-                    UNION
-                    SELECT DISTINCT localisation_ept_nom as name, 'EPT' as type FROM ${TABLE_NAME} WHERE localisation_ept_nom IS NOT NULL
-                    ORDER BY name
-                `;
-                const geoResult = await runQuery(geoQuery);
-                setGeoOptions(geoResult as LocationItem[]);
-
-                setGlobalSearch('');
-                setMeasureSearch('');
-                setSelectedSectors([]);
-                setSelectedLocations([]);
-                setSelectedYears([]);
-                setDbReady(true);
-                
-            } catch (error) {
-                console.error("Error loading file:", error);
-                setFileError("Erreur format JSONL.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        reader.readAsText(file);
+            const today = new Date().toISOString().split('T')[0];
+            const scopeLabel = datasetScope === 'IDF' ? 'idf' : 'national';
+            const filename = `accords_mobilites_${scopeLabel}_${today}.xlsx`;
+            XLSX.writeFile(workbook, filename);
+        } catch (err) {
+            console.error("Erreur export Excel:", err);
+            alert("Une erreur est survenue lors de la création du fichier Excel.");
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     // Geo Chips Handlers
@@ -1129,7 +1152,7 @@ const Dashboard: React.FC = () => {
                             value={globalSearch}
                             onChange={e => setGlobalSearch(e.target.value)}
                             className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 py-2 px-3"
-                            placeholder="Entreprise, SIRET, mot-clé..."
+                            placeholder="ID, SIRET, entreprise, mot-clé, texte..."
                         />
                     </div>
 
@@ -1478,16 +1501,28 @@ const Dashboard: React.FC = () => {
                         <span className="text-indigo-600 dark:text-indigo-400 font-bold">{measuresDetectedCount}</span> mesure(s) détectée(s) dans <span className="text-indigo-600 dark:text-indigo-400 font-bold">{agreementsWithMobilityCount}</span> accord(s) (<span className="text-indigo-600 dark:text-indigo-400 font-bold">{establishmentsWithMobilityCount}</span> établissement(s) distincts) sur un total de <span className="text-indigo-600 dark:text-indigo-400 font-bold">{uniqueAgreementsCount}</span> accord(s) analysés (<span className="text-indigo-600 dark:text-indigo-400 font-bold">{uniqueEstablishmentsCount}</span> établissement(s) distincts).
                      </p>
                      
-                     <label className="text-sm font-medium text-indigo-600 hover:text-indigo-500 cursor-pointer flex items-center">
-                        <span className="mr-2">Importer un JSONL local</span>
-                        <input
-                            type="file"
-                            accept=".json,.jsonl"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                        />
-                     </label>
-                     {fileError && <p className="ml-4 text-xs text-red-500">{fileError}</p>}
+                     <button
+                         type="button"
+                         onClick={handleExportXLSX}
+                         disabled={isExporting || filteredAgreements.length === 0}
+                         className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 transition-all shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                         title="Télécharger les accords actuellement filtrés au format tableur Excel .xlsx"
+                     >
+                         {isExporting ? (
+                             <>
+                                 <span className="animate-spin h-3.5 w-3.5 border-2 border-emerald-600 border-t-transparent rounded-full" />
+                                 <span>Génération Excel...</span>
+                             </>
+                         ) : (
+                             <>
+                                 <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm1.8 14.5-1.4-2.5 1.4-2.5h-1.6l-.7 1.5-.7-1.5h-1.6l1.4 2.5-1.4 2.5h1.6l.7-1.6.7 1.6h1.6zM13 9V3.5L18.5 9H13z"/>
+                                 </svg>
+                                 <span>Exporter en Excel (.xlsx)</span>
+                                 <span className="text-[11px] opacity-80">({filteredAgreements.length.toLocaleString('fr-FR')})</span>
+                             </>
+                         )}
+                     </button>
                 </div>
             </div>
 

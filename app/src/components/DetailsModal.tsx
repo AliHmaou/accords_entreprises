@@ -10,11 +10,13 @@ interface DetailsModalProps {
 }
 
 const HighlightedText = ({ text, highlight }: { text: string; highlight: string }) => {
-    if (!highlight.trim()) {
-        return <>{text}</>;
+    if (!text || !highlight.trim()) {
+        return <>{text || ''}</>;
     }
-    const escapedHighlight = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(${escapedHighlight})`, 'gi');
+    const words = highlight.trim().split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 0) return <>{text}</>;
+    const escapedWords = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    const regex = new RegExp(`(${escapedWords})`, 'gi');
     const parts = text.split(regex);
     return (
         <>
@@ -97,9 +99,12 @@ const DetailsModal = ({ agreement, onClose, highlightTerm }: DetailsModalProps) 
         let html = marked.parse(processedText, { breaks: true, gfm: true }) as string;
 
         if (highlight.trim()) {
-            const escapedTerm = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(`(${escapedTerm})(?![^<]*>)`, 'gi');
-            html = html.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-600 rounded px-1 py-0.5">$1</mark>');
+            const words = highlight.trim().split(/\s+/).filter(w => w.length > 0);
+            if (words.length > 0) {
+                const escapedWords = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+                const regex = new RegExp(`(${escapedWords})(?![^<]*>)`, 'gi');
+                html = html.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-600 rounded px-1 py-0.5">$1</mark>');
+            }
         }
         
         return { __html: html };

@@ -42,10 +42,13 @@ const SortIndicator: React.FC<{ field: string; currentField: string; order: 'asc
 };
 
 const HighlightedText: React.FC<{ text: string; highlight: string }> = ({ text, highlight }) => {
-    if (!highlight.trim()) {
-        return <>{text}</>;
+    if (!text || !highlight.trim()) {
+        return <>{text || ''}</>;
     }
-    const regex = new RegExp(`(${highlight})`, 'gi');
+    const words = highlight.trim().split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 0) return <>{text}</>;
+    const escapedWords = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    const regex = new RegExp(`(${escapedWords})`, 'gi');
     const parts = text.split(regex);
     return (
         <>
