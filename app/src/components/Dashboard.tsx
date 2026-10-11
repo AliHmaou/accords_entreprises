@@ -371,49 +371,55 @@ const Dashboard: React.FC = () => {
         };
     }, [globalSearch, measureSearch, selectedSectionNaf, selectedSubSector, selectedLocations, onlyMobiliteIA, onlyIDF, ignoreRevendications, onlyFmdIkv, onlyEffortRemboursement, onlyPrimeCarburant, onlyInfraVelo, selectedYears, dbReady]);
 
-    // Export des accords filtrés au format tableur Excel .xlsx
+    // Export des accords filtrés au format tableur Excel .xlsx (avec troncature sécurisée à 32 700 car. max par cellule)
     const handleExportXLSX = () => {
         if (!filteredAgreements || filteredAgreements.length === 0) return;
         setIsExporting(true);
+
+        const truncateForExcel = (val: any, maxLen = 32700): string => {
+            if (val === null || val === undefined) return "";
+            const s = String(val);
+            if (s.length <= maxLen) return s;
+            return s.substring(0, maxLen) + " ... [tronqué pour Excel]";
+        };
+
         try {
             const exportRows = filteredAgreements.map(a => ({
-                "Identifiant Accord": a.ID || "",
-                "Raison Sociale": a.RAISON_SOCIALE || "",
-                "SIRET": a.SIRET || "",
+                "Identifiant Accord": truncateForExcel(a.ID),
+                "Raison Sociale": truncateForExcel(a.RAISON_SOCIALE),
+                "SIRET": truncateForExcel(a.SIRET),
                 "Date de Signature": formatDate(a.DATE_TEXTE),
                 "Date de Dépôt": formatDate(a.DATE_DEPOT),
-                "Section NAF": a.SECTION_NAF || "",
-                "Sous-secteur d'activité": a.SECTEUR || "",
-                "Code APE": a.CODE_APE || "",
-                "Taille d'Entreprise": a.categorie_entreprise || "",
-                "Région": a.localisation_region_nom || "",
-                "Département": a.localisation_departement_nom ? `${a.localisation_departement_nom} (${a.localisation_departement_code || ''})` : "",
-                "EPCI": a.localisation_epci_nom || "",
-                "EPT (Grand Paris)": a.localisation_ept_nom || "",
-                "Mesure IDFM": a.mesures_ref_idfm || "",
-                "Synthèse Mesure IA": a.mesure_extraite || a.resume_mesure_proposee || "",
-                "Mot-clé Détecté": a.theme_recherche || "",
+                "Section NAF": truncateForExcel(a.SECTION_NAF),
+                "Sous-secteur d'activité": truncateForExcel(a.SECTEUR),
+                "Code APE": truncateForExcel(a.CODE_APE),
+                "Taille d'Entreprise": truncateForExcel(a.categorie_entreprise),
+                "Région": truncateForExcel(a.localisation_region_nom),
+                "Département": truncateForExcel(a.localisation_departement_nom ? `${a.localisation_departement_nom} (${a.localisation_departement_code || ''})` : ""),
+                "EPCI": truncateForExcel(a.localisation_epci_nom),
+                "EPT (Grand Paris)": truncateForExcel(a.localisation_ept_nom),
+                "Mesure IDFM": truncateForExcel(a.mesures_ref_idfm),
+                "Synthèse Mesure IA": truncateForExcel(a.mesure_extraite || a.resume_mesure_proposee),
+                "Mot-clé Détecté": truncateForExcel(a.theme_recherche),
                 "Mobilité Confirmée IA": a.mentionne_mobilite_ia || "Non",
                 "Mobilités Durables": a.est_mobilites_durables || "Non",
                 "Prime Carburant": a.est_prime_carburant || "Non",
                 "Infrastructures Vélo": a.est_infra_velo || "Non",
                 "FMD / IKV en place": a.est_fmd_ikv_mis_en_place || "Non",
                 "Remboursement TC > 50%": a.est_superieur_taux_legal || "Non",
-                "Moyens Matériels": a.moyens_materiels && a.moyens_materiels !== 'AUCUNE_CORRESPONDANCE' ? a.moyens_materiels : "",
-                "Moyens Financiers": a.moyens_financiers && a.moyens_financiers !== 'AUCUNE_CORRESPONDANCE' ? a.moyens_financiers : "",
-                "Titre de l'Accord": a.TITRE_TXT || "",
-                "Extrait de l'Accord": a.extrait_chunk || "",
-                "Lien Légifrance": a.url_legifrance || (a.ID ? `https://www.legifrance.gouv.fr/acco/id/${a.ID}` : "")
+                "Moyens Matériels": truncateForExcel(a.moyens_materiels && a.moyens_materiels !== 'AUCUNE_CORRESPONDANCE' ? a.moyens_materiels : ""),
+                "Moyens Financiers": truncateForExcel(a.moyens_financiers && a.moyens_financiers !== 'AUCUNE_CORRESPONDANCE' ? a.moyens_financiers : ""),
+                "Titre de l'Accord": truncateForExcel(a.TITRE_TXT),
+                "Extrait de l'Accord": truncateForExcel(a.extrait_chunk),
+                "Lien Légifrance": truncateForExcel(a.url_legifrance || (a.ID ? `https://www.legifrance.gouv.fr/acco/id/${a.ID}` : ""))
             }));
 
             const worksheet = XLSX.utils.json_to_sheet(exportRows);
 
-            // Ajustement automatique des largeurs de colonnes
+            // Ajustement automatique des largeurs de colonnes (plafonnées à 60)
             const colWidths = Object.keys(exportRows[0] || {}).map(key => {
-                const maxLen = Math.max(
-                    key.length,
-                    ...exportRows.slice(0, 100).map(row => String((row as any)[key] || '').length)
-                );
+                const sampleValues = exportRows.slice(0, 50).map(row => String((row as any)[key] || '').slice(0, 60).length);
+                const maxLen = Math.max(key.length, ...sampleValues);
                 return { wch: Math.min(Math.max(maxLen + 2, 10), 60) };
             });
             worksheet['!cols'] = colWidths;
