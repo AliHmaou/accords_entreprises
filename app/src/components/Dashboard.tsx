@@ -484,8 +484,18 @@ const Dashboard: React.FC = () => {
         return ['oui', 'true', '1'].includes(iaVal);
     };
 
-    // 1. Donut : Proportion Globale (France entière)
-    const globalMobilityData = useMemo(() => {
+    // Helper pour identifier la zone de couronne francilienne
+    const getCouronneZone = (depCode: string | undefined): 'PARIS' | 'PC' | 'GC' | null => {
+        if (!depCode) return null;
+        const clean = depCode.trim();
+        if (clean === '75') return 'PARIS';
+        if (['92', '93', '94'].includes(clean)) return 'PC';
+        if (['77', '78', '91', '95'].includes(clean)) return 'GC';
+        return null;
+    };
+
+    // Helper réutilisable pour calculer les proportions d'accords mentionnant la mobilité par zone
+    const computeMobilityForZone = (targetZone: 'PARIS' | 'PC' | 'GC', color: string) => {
         if (!filteredAgreements || filteredAgreements.length === 0) return [];
         let oui = 0;
         let non = 0;
@@ -497,7 +507,8 @@ const Dashboard: React.FC = () => {
         });
 
         filteredAgreements.forEach(a => {
-            if (!processedIds.has(a.ID)) {
+            const zone = getCouronneZone(a.localisation_departement_code);
+            if (zone === targetZone && !processedIds.has(a.ID)) {
                 processedIds.add(a.ID);
                 if (idsWithMobility.has(a.ID)) {
                     oui++;
@@ -509,71 +520,24 @@ const Dashboard: React.FC = () => {
         
         if (oui === 0 && non === 0) return [];
         return [
-            { name: "Mentionne la mobilité", value: oui, fill: "#10B981" },
+            { name: "Mentionne la mobilité", value: oui, fill: color },
             { name: "Ne mentionne pas", value: non, fill: "#E5E7EB" }
         ];
+    };
+
+    // 1. Donut : Paris (75)
+    const parisMobilityData = useMemo(() => {
+        return computeMobilityForZone('PARIS', '#3B82F6');
     }, [filteredAgreements]);
 
-    // 2. Donut : Proportion Île-de-France (IDF)
-    const idfMobilityData = useMemo(() => {
-        if (!filteredAgreements || filteredAgreements.length === 0) return [];
-        let oui = 0;
-        let non = 0;
-        
-        const processedIds = new Set();
-        const idsWithMobility = new Set();
-        filteredAgreements.forEach(a => {
-            if (checkMobility(a)) idsWithMobility.add(a.ID);
-        });
-
-        filteredAgreements.forEach(a => {
-            const reg = a.localisation_region_nom || a.localisation_region;
-            if (reg === 'Île-de-France' && !processedIds.has(a.ID)) {
-                processedIds.add(a.ID);
-                if (idsWithMobility.has(a.ID)) {
-                    oui++;
-                } else {
-                    non++;
-                }
-            }
-        });
-        
-        if (oui === 0 && non === 0) return [];
-        return [
-            { name: "Mentionne la mobilité", value: oui, fill: "#3B82F6" },
-            { name: "Ne mentionne pas", value: non, fill: "#E5E7EB" }
-        ];
+    // 2. Donut : Petite Couronne (92, 93, 94)
+    const petiteCouronneMobilityData = useMemo(() => {
+        return computeMobilityForZone('PC', '#6366F1');
     }, [filteredAgreements]);
 
-    // 3. Donut : Proportion Hors Île-de-France (Hors IDF)
-    const horsIdfMobilityData = useMemo(() => {
-        if (!filteredAgreements || filteredAgreements.length === 0) return [];
-        let oui = 0;
-        let non = 0;
-        
-        const processedIds = new Set();
-        const idsWithMobility = new Set();
-        filteredAgreements.forEach(a => {
-            if (checkMobility(a)) idsWithMobility.add(a.ID);
-        });
-
-        filteredAgreements.forEach(a => {
-            const reg = a.localisation_region_nom || a.localisation_region;
-            if (reg !== 'Île-de-France' && !processedIds.has(a.ID)) {
-                processedIds.add(a.ID);
-                if (idsWithMobility.has(a.ID)) {
-                    oui++;
-                } else {
-                    non++;
-                }
-            }
-        });
-        
-        if (oui === 0 && non === 0) return [];
-        return [
-            { name: "Mentionne la mobilité", value: oui, fill: "#F59E0B" },
-            { name: "Ne mentionne pas", value: non, fill: "#E5E7EB" }
-        ];
+    // 3. Donut : Grande Couronne (77, 78, 91, 95)
+    const grandeCouronneMobilityData = useMemo(() => {
+        return computeMobilityForZone('GC', '#10B981');
     }, [filteredAgreements]);
 
     // 3. Taux de mobilité par catégorie d'entreprise (BarChart)
@@ -1297,23 +1261,23 @@ const Dashboard: React.FC = () => {
                         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-100 dark:border-gray-700">
                             <div className="mb-6">
                                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                    Proportion d'accords mentionnant la mobilité
+                                    Proportion d'accords mentionnant la mobilité par zone francilienne
                                 </h2>
                                 <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2 border-l-4 border-indigo-500 pl-4 py-1">
                                     <p className="font-semibold text-gray-800 dark:text-gray-200">
-                                        Combien d’accords, sur tous les accords franciliens, évoquent le sujet de la mobilité des salariés ?
+                                        Combien d’accords évoquent le sujet de la mobilité des salariés selon les couronnes franciliennes ?
                                     </p>
                                     <p>
-                                        <span className="font-semibold">Définition :</span> Nombre distinct d’accords (les avenants comptant aussi pour un accord), comprenant au moins un extrait dont on estime qu’il mentionne les mobilités (validé par l'IA).
+                                        <span className="font-semibold">Définition :</span> Nombre distinct d’accords (les avenants comptant aussi pour un accord), comprenant au moins un extrait dont on estime qu’il mentionne les mobilités (validé par l'IA), ventilé entre Paris (75), la Petite Couronne (92, 93, 94) et la Grande Couronne (77, 78, 91, 95).
                                     </p>
                                 </div>
                             </div>
                             
-                        {/* Les 3 Donuts sur la même ligne */}
+                        {/* Les 3 Donuts sur la même ligne : Paris, Petite Couronne, Grande Couronne */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <DonutChart title="Région Île-de-France" data={idfMobilityData} />
-                            <DonutChart title="Hors Île-de-France" data={horsIdfMobilityData} />
-                            <DonutChart title="France entière" data={globalMobilityData} />
+                            <DonutChart title="Paris (75)" data={parisMobilityData} />
+                            <DonutChart title="Petite Couronne (92, 93, 94)" data={petiteCouronneMobilityData} />
+                            <DonutChart title="Grande Couronne (77, 78, 91, 95)" data={grandeCouronneMobilityData} />
                         </div>
                     </div>
 
