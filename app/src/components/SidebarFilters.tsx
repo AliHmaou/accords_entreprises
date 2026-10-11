@@ -46,6 +46,13 @@ export interface SidebarFiltersProps {
     onToggleFmdIkv: () => void;
     onlyEffortRemboursement: boolean;
     onToggleEffortRemboursement: () => void;
+    onlyPrimeCarburant: boolean;
+    onTogglePrimeCarburant: () => void;
+    onlyInfraVelo: boolean;
+    onToggleInfraVelo: () => void;
+    hasActiveFilters: boolean;
+    onResetFilters: () => void;
+}
 
 const SidebarFilters: React.FC<SidebarFiltersProps> = (props) => {
     const {
@@ -128,14 +135,6 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = (props) => {
                 )}
             </div>
 
-    onlyPrimeCarburant: boolean;
-    onTogglePrimeCarburant: () => void;
-    onlyInfraVelo: boolean;
-    onToggleInfraVelo: () => void;
-
-    hasActiveFilters: boolean;
-    onResetFilters: () => void;
-}
             {/* Recherche Globale */}
             <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">
